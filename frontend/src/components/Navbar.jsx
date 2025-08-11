@@ -51,7 +51,7 @@ const Navbar = () => {
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-2">
-            <NavLink to="/">Venues</NavLink>
+            <NavLink to="/venues">Venues</NavLink>
             {canCreate && <NavLink to="/venues/new">Add Venue</NavLink>}
             <NavLink to="/Profile">Profile</NavLink>
             {user ? (

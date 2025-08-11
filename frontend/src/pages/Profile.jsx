@@ -17,6 +17,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { base } from "../helper";
+import Breadcrumb from "../components/Breadcrumb";
 
 const Profile = () => {
   const [formData, setFormData] = useState({
@@ -370,6 +371,9 @@ const Profile = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="min-h-screen backdrop-blur-sm bg-black/20">
         <div className="container mx-auto px-4 py-8">
+          {/* Breadcrumb Navigation */}
+          <Breadcrumb />
+
           <div className="grid lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
             {/* Profile Sidebar */}
             <div className="lg:col-span-4">
@@ -382,7 +386,7 @@ const Profile = () => {
                           selectedFile
                             ? URL.createObjectURL(selectedFile)
                             : formData.profilePhoto ||
-                              `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
+                            `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
                         }
                         alt="Profile"
                         className="w-full h-full rounded-full object-cover bg-white"
@@ -433,11 +437,10 @@ const Profile = () => {
                       setShowEdit(false);
                       fetchBookings();
                     }}
-                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                      activeTab === "bookings" && !showEdit
+                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === "bookings" && !showEdit
                         ? "bg-white/20 text-white shadow-lg"
                         : "bg-white/5 text-gray-300 hover:bg-white/10"
-                    }`}
+                      }`}
                   >
                     <BookOpen className="w-4 h-4" />
                     View Bookings
@@ -473,11 +476,10 @@ const Profile = () => {
                         setActiveTab("bookings");
                         setShowEdit(false);
                       }}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
-                        activeTab === "bookings" && !showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${activeTab === "bookings" && !showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
+                        }`}
                     >
                       All Bookings ({nonCancelled.length})
                       {activeTab === "bookings" && !showEdit && (
@@ -489,11 +491,10 @@ const Profile = () => {
                         setActiveTab("cancelled");
                         setShowEdit(false);
                       }}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
-                        activeTab === "cancelled" && !showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${activeTab === "cancelled" && !showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
+                        }`}
                     >
                       Cancelled ({cancelled.length})
                       {activeTab === "cancelled" && !showEdit && (
@@ -502,11 +503,10 @@ const Profile = () => {
                     </button>
                     <button
                       onClick={() => setShowEdit(true)}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
-                        showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                      }`}
+                        }`}
                     >
                       Edit Profile
                       {showEdit && (
@@ -749,7 +749,7 @@ const Profile = () => {
                                   selectedFile
                                     ? URL.createObjectURL(selectedFile)
                                     : formData.profilePhoto ||
-                                      `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
+                                    `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
                                 }
                                 alt="Profile Preview"
                                 className="w-full h-full rounded-full object-cover bg-white"
@@ -872,11 +872,10 @@ const Profile = () => {
                             type="button"
                             onClick={handleSave}
                             disabled={saving}
-                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                              saving
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${saving
                                 ? "bg-purple-500/60 text-white cursor-not-allowed"
                                 : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-purple-500/25"
-                            }`}
+                              }`}
                           >
                             {saving ? (
                               <>

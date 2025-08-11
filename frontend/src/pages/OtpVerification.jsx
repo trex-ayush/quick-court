@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { base } from "../helper"; // <-- base URL
 import otpImage from "../assets/login.jpg";
+import Breadcrumb from "../components/Breadcrumb";
 
 const OtpVerification = () => {
     const [otp, setOtp] = useState(Array(6).fill(""));
@@ -48,6 +49,11 @@ const OtpVerification = () => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
+            {/* Breadcrumb Navigation */}
+            <div className="absolute top-4 left-4 z-20">
+                <Breadcrumb />
+            </div>
+            
             <div className="max-w-5xl w-full bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden grid grid-cols-1 md:grid-cols-2">
 
                 {/* Left Image */}

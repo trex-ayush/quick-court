@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { base } from "../helper";
 import bgImage from "../assets/sign-up.jpg";
+import Breadcrumb from "../components/Breadcrumb";
 
 export default function Signup() {
     const [form, setForm] = useState({
@@ -66,6 +67,11 @@ export default function Signup() {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4">
+            {/* Breadcrumb Navigation */}
+            <div className="absolute top-4 left-4 z-20">
+                <Breadcrumb />
+            </div>
+            
             <div className="max-w-5xl w-full bg-white/20 backdrop-blur-lg rounded-2xl shadow-lg overflow-hidden grid grid-cols-1 md:grid-cols-2">
 
                 {/* Left Image Section */}

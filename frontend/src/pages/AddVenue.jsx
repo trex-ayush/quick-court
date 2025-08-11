@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { base } from "../helper";
+import Breadcrumb from "../components/Breadcrumb";
 
 const AMENITIES = [
   { key: "parking", label: "Parking", icon: "🅿️" },
@@ -53,7 +54,7 @@ const AddVenue = () => {
       sunday: { open: "", close: "" },
       _24hours: false,
     },
-    courts: [{ name: "", perHourPrice: "" }],
+    courts: [],
     photos: [],
   });
 
@@ -84,12 +85,26 @@ const AddVenue = () => {
   };
 
   const toggleSport = (id) => {
-    setForm((f) => ({
-      ...f,
-      sports: f.sports.includes(id)
-        ? f.sports.filter((s) => s !== id)
-        : [...f.sports, id],
-    }));
+    setForm((f) => {
+      const sport = sports.find(s => (s._id || s.id) === id);
+      const sportName = sport?.name || `Sport ${id}`;
+      
+      if (f.sports.includes(id)) {
+        // Remove sport and its corresponding court
+        return {
+          ...f,
+          sports: f.sports.filter((s) => s !== id),
+          courts: f.courts.filter((c) => c.name !== sportName)
+        };
+      } else {
+        // Add sport and create a corresponding court
+        return {
+          ...f,
+          sports: [...f.sports, id],
+          courts: [...f.courts, { name: sportName, perHourPrice: "" }]
+        };
+      }
+    });
   };
 
   const filteredSports = sports.filter((s) =>
@@ -103,11 +118,7 @@ const AddVenue = () => {
       return { ...f, courts };
     });
   };
-  const addCourt = () =>
-    setForm((f) => ({
-      ...f,
-      courts: [...f.courts, { name: "", perHourPrice: "" }],
-    }));
+  
   const removeCourt = (idx) =>
     setForm((f) => ({ ...f, courts: f.courts.filter((_, i) => i !== idx) }));
 
@@ -219,6 +230,9 @@ const AddVenue = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb />
+        
         {/* Enhanced Header */}
         <div className="mb-8 text-center">
           <div className="inline-block p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 mb-4">
@@ -539,63 +553,65 @@ const AddVenue = () => {
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                   <span>🏟️</span> Courts & Pricing
                 </h2>
-                <button
-                  type="button"
-                  onClick={addCourt}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition-all duration-200 transform hover:scale-105 flex items-center gap-2"
-                >
-                  <span>➕</span> Add Court
-                </button>
+                <div className="text-sm text-slate-600">
+                  Courts are automatically created based on selected sports
+                </div>
               </div>
-              <div className="space-y-4">
-                {form.courts.map((c, idx) => (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white rounded-xl p-4 border-2 border-emerald-200 shadow-sm"
-                  >
-                    <div className="sm:col-span-7">
-                      <input
-                        placeholder="Court name (e.g., Court A, Main Field)"
-                        value={c.name}
-                        onChange={(e) =>
-                          handleCourtChange(idx, "name", e.target.value)
-                        }
-                        className="w-full rounded-lg border-2 border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all"
-                        required
-                      />
-                    </div>
-                    <div className="sm:col-span-4">
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          min={0}
-                          placeholder="Price per hour"
-                          value={c.perHourPrice}
-                          onChange={(e) =>
-                            handleCourtChange(
-                              idx,
-                              "perHourPrice",
-                              e.target.value
-                            )
-                          }
-                          className="w-full rounded-lg border-2 border-slate-200 pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeCourt(idx)}
-                      className="sm:col-span-1 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 px-3 py-3 text-red-600 font-bold transition-all duration-200 transform hover:scale-105"
+              
+              {form.courts.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  <div className="text-4xl mb-2">🏸</div>
+                  <p>Select sports above to add courts and set pricing</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {form.courts.map((c, idx) => (
+                    <div
+                      key={idx}
+                      className="grid grid-cols-1 sm:grid-cols-12 gap-3 bg-white rounded-xl p-4 border-2 border-emerald-200 shadow-sm"
                     >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div className="sm:col-span-7">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">🏆</span>
+                          <div>
+                            <div className="font-semibold text-slate-800">{c.name}</div>
+                            <div className="text-sm text-slate-500">Court name (auto-generated from sport)</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="sm:col-span-4">
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">
+                            ₹
+                          </span>
+                          <input
+                            type="number"
+                            min={0}
+                            placeholder="Price per hour"
+                            value={c.perHourPrice}
+                            onChange={(e) =>
+                              handleCourtChange(
+                                idx,
+                                "perHourPrice",
+                                e.target.value
+                              )
+                            }
+                            className="w-full rounded-lg border-2 border-slate-200 pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent transition-all"
+                            required
+                          />
+                        </div>
+                      </div>
+                      {/* <button
+                        type="button"
+                        onClick={() => removeCourt(idx)}
+                        className="sm:col-span-1 rounded-lg border-2 border-red-200 bg-red-50 hover:bg-red-100 px-3 py-3 text-red-600 font-bold transition-all duration-200 transform hover:scale-105"
+                      >
+                        ✕
+                      </button> */}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Photos Section */}

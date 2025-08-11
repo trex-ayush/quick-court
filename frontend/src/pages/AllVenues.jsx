@@ -3,6 +3,7 @@ import axios from "axios";
 import { base } from "../helper";
 import venueImg from "../assets/login.jpg";
 import { useNavigate } from "react-router-dom";
+import Breadcrumb from "../components/Breadcrumb";
 
 const apiOrigin = base.replace(/\/api\/?$/, "");
 
@@ -154,13 +155,15 @@ const AllVenues = () => {
       setLoading(true);
       setError("");
       const { data } = await axios.get(`${base}/venues/`, {
-        params: { page: pageNum, limit: 12 },
+        params: { page: pageNum, limit: 6, status: "approved" }, // Added status filter to only show approved venues
       });
       const list = Array.isArray(data?.data)
         ? data.data
         : Array.isArray(data)
         ? data
         : [];
+      console.log('Fetched venues:', list.length, 'Total pages:', data?.pagination?.pages, 'Current page:', pageNum); // Debug log
+      console.log('Venue names:', list.map(v => ({ name: v?.name, status: v?.status, venueType: v?.venueType }))); // Debug log for venue details
       setVenues(list);
       const totalPages = Number(data?.pagination?.pages || 1);
       setPages(totalPages);
@@ -186,7 +189,8 @@ const AllVenues = () => {
   }, [venues]);
 
   const filtered = useMemo(() => {
-    return venues.filter((v) => {
+    console.log('Filtering venues:', venues.length, 'venues'); // Debug log
+    const filteredVenues = venues.filter((v) => {
       const nameOk = v?.name?.toLowerCase().includes(query.toLowerCase());
       const sportOk =
         sport === "All" || (v?.sports || []).some((s) => s?.name === sport);
@@ -195,18 +199,26 @@ const AllVenues = () => {
       const price = getMinPrice(v);
       const priceOk =
         price === undefined || (price >= minPrice && price <= maxPrice);
-      const hasOutdoor = Array.isArray(v?.courts)
-        ? v.courts.some((c) => c?.isOutdoor === true)
-        : false;
-      const hasIndoor = Array.isArray(v?.courts)
-        ? v.courts.some((c) => c?.isOutdoor === false)
-        : false;
+      
+      // Fixed venue type filtering to use venue.venueType instead of court.isOutdoor
       const typeOk =
         venueType === "all" ||
-        (venueType === "indoor" && hasIndoor) ||
-        (venueType === "outdoor" && hasOutdoor);
+        (venueType === "indoor" && v?.venueType === "indoor") ||
+        (venueType === "outdoor" && v?.venueType === "outdoor");
+      
+      // Debug log for filtered out venues
+      if (!nameOk || !sportOk || !ratingOk || !priceOk || !typeOk) {
+        console.log('Venue filtered out:', v?.name, {
+          nameOk, sportOk, ratingOk, priceOk, typeOk,
+          query, sport, minRating, minPrice, maxPrice, venueType,
+          venueTypeValue: v?.venueType
+        });
+      }
+      
       return nameOk && sportOk && ratingOk && priceOk && typeOk;
     });
+    console.log('Filtered venues:', filteredVenues.length, 'out of', venues.length); // Debug log
+    return filteredVenues;
   }, [venues, query, sport, minRating, minPrice, maxPrice, venueType]);
 
   const nextPage = () => {
@@ -236,6 +248,9 @@ const AllVenues = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white">
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb />
+        
         {/* Enhanced Title */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { base } from "../helper";
+import Breadcrumb from "../components/Breadcrumb";
 
 const apiOrigin = base.replace(/\/api\/?$/, "");
 const normalizePhoto = (p) =>
@@ -153,6 +154,9 @@ const VenueDetails = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb />
+        
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div>
