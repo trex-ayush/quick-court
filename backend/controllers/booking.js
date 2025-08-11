@@ -80,6 +80,25 @@ exports.updateBooking = async (req, res) => {
   }
 };
 
+// Admin: update booking status
+exports.adminUpdateBookingStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const allowed = ["confirmed", "cancelled", "completed", "no-show"];
+    if (!allowed.includes(status)) {
+      return res.status(400).json({ error: "Invalid booking status" });
+    }
+    const booking = await Booking.findById(id);
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+    booking.status = status;
+    await booking.save();
+    res.status(200).json({ message: "Booking status updated", booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
   try {
@@ -104,20 +123,20 @@ exports.getOwnerBookings = async (req, res) => {
     // First get all venues owned by the current user
     const Venue = require("../models/venue");
     const ownedVenues = await Venue.find({ owner: req.user._id }).select("_id");
-    const venueIds = ownedVenues.map(venue => venue._id);
+    const venueIds = ownedVenues.map((venue) => venue._id);
 
     if (venueIds.length === 0) {
       return res.status(200).json([]);
     }
 
     // Get all bookings for these venues
-    const bookings = await Booking.find({ 
-      venue: { $in: venueIds } 
+    const bookings = await Booking.find({
+      venue: { $in: venueIds },
     })
-    .populate("user", "name email")
-    .populate("venue", "name address")
-    .populate("sport", "name")
-    .sort({ date: -1 });
+      .populate("user", "name email")
+      .populate("venue", "name address")
+      .populate("sport", "name")
+      .sort({ date: -1 });
 
     res.status(200).json(bookings);
   } catch (err) {
@@ -136,21 +155,23 @@ exports.ownerCancelBooking = async (req, res) => {
     }
 
     // First check if the booking exists and belongs to a venue owned by the current user
-    const booking = await Booking.findById(bookingId).populate('venue');
-    
+    const booking = await Booking.findById(bookingId).populate("venue");
+
     if (!booking) {
       return res.status(404).json({ error: "Booking not found" });
     }
 
     // Check if the venue belongs to the current owner
     const Venue = require("../models/venue");
-    const venue = await Venue.findOne({ 
-      _id: booking.venue._id, 
-      owner: req.user._id 
+    const venue = await Venue.findOne({
+      _id: booking.venue._id,
+      owner: req.user._id,
     });
 
     if (!venue) {
-      return res.status(403).json({ error: "You can only cancel bookings for your own venues" });
+      return res
+        .status(403)
+        .json({ error: "You can only cancel bookings for your own venues" });
     }
 
     // Check if booking is in the future
@@ -168,9 +189,9 @@ exports.ownerCancelBooking = async (req, res) => {
 
     await booking.save();
 
-    res.status(200).json({ 
-      message: "Booking cancelled successfully", 
-      booking 
+    res.status(200).json({
+      message: "Booking cancelled successfully",
+      booking,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
