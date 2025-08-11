@@ -1,99 +1,122 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import { User, Mail, Phone, Calendar, MapPin, Clock, Camera, Shield, Star, Settings, BookOpen, X } from "lucide-react";
 import { base } from "../helper";
-import profileImage from "../assets/login.jpg"; // Fallback avatar
-
-const mockBookings = [
-  {
-    id: 1,
-    venue: "Skyline Badminton Court (Badminton)",
-    date: "18 June 2025",
-    time: "5:00 PM - 6:00 PM",
-    location: "Rajkot, Gujarat",
-    status: "Confirmed",
-    isPast: false,
-    cancelled: false,
-  },
-  {
-    id: 2,
-    venue: "Skyline Badminton Court (Badminton)",
-    date: "18 June 2024",
-    time: "5:00 PM - 6:00 PM",
-    location: "Rajkot, Gujarat",
-    status: "Confirmed",
-    isPast: true,
-    cancelled: false,
-  },
-  {
-    id: 3,
-    venue: "Skyline Badminton Court (Badminton)",
-    date: "10 May 2024",
-    time: "4:00 PM - 5:00 PM",
-    location: "Rajkot, Gujarat",
-    status: "Cancelled",
-    isPast: true,
-    cancelled: true,
-  },
-];
 
 const Profile = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
+    role: "",
     profilePhoto: null,
     oldPassword: "",
     newPassword: "",
   });
   const [activeTab, setActiveTab] = useState("bookings");
   const [showEdit, setShowEdit] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const [bookingsError, setBookingsError] = useState("");
+
+  const API_BASE = base
 
   useEffect(() => {
-    // Load from localStorage first for an instant render
-    const stored = localStorage.getItem("qc_user");
-    if (stored) {
-      const u = JSON.parse(stored);
-      setFormData((prev) => ({
-        ...prev,
-        name: u.name || "",
-        email: u.email || "",
-        phone: u.phone || "",
-        profilePhoto: u.profilePhoto || u.avatar || null,
-      }));
-    }
-
-    // Validate/fetch from backend if cookie exists
-    const fetchMe = async () => {
-      try {
-        const res = await axios.get(`${base}/users/me`, { withCredentials: true });
-        const u = res.data?.user;
-        if (u) {
-          setFormData((prev) => ({
-            ...prev,
-            name: u.name || "",
-            email: u.email || "",
-            phone: u.phone || "",
-            profilePhoto: u.profilePhoto || null,
-          }));
-          localStorage.setItem(
-            "qc_user",
-            JSON.stringify({
-              id: u._id,
-              name: u.name,
-              email: u.email,
-              phone: u.phone,
-              role: u.role,
-              profilePhoto: u.profilePhoto || null,
-            })
-          );
-        }
-      } catch (err) {
-        // Not logged in or server error; ignore to keep UI usable
-      }
-    };
-
-    fetchMe();
+    fetchUserData();
+    fetchBookings();
   }, []);
+
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const response = await fetch(`${API_BASE}/users/me`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.user) {
+        const user = data.user;
+        setFormData({
+          name: user.name || "",
+          email: user.email || "",
+          phone: user.phone || "",
+          role: user.role || "user",
+          profilePhoto: user.profilePhoto || null,
+          oldPassword: "",
+          newPassword: "",
+        });
+        
+        // Store user data in localStorage for consistency with original code
+        localStorage.setItem("qc_user", JSON.stringify({
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          profilePhoto: user.profilePhoto,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to fetch user data:', err);
+      setError("Failed to load user data. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      setLoadingBookings(true);
+      setBookingsError("");
+      const response = await fetch(`${API_BASE}/bookings/me`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const bookingsData = Array.isArray(data) ? data : (data.bookings || []);
+      setBookings(bookingsData);
+    } catch (err) {
+      console.error('Failed to fetch bookings:', err);
+      setBookingsError("Failed to load bookings. Please try again.");
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  const formatDate = (d) => {
+    try {
+      return new Date(d).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return String(d);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -105,219 +128,538 @@ const Profile = () => {
       oldPassword: "",
       newPassword: "",
     });
+    setSaveMsg("");
+    setSelectedFile(null);
   };
 
-  const handleSave = () => {
-    alert("Profile Updated!");
-    setShowEdit(false);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setSaveMsg("");
+
+      const isPasswordChange = formData.newPassword && formData.newPassword.trim().length > 0;
+      const formDataToSend = new FormData();
+      
+      formDataToSend.append("name", formData.name);
+      
+      if (isPasswordChange) {
+        formDataToSend.append("password", formData.newPassword.trim());
+        formDataToSend.append("oldPassword", (formData.oldPassword || "").trim());
+      }
+      
+      if (selectedFile) {
+        formDataToSend.append("profilePhoto", selectedFile);
+      }
+
+      const response = await fetch(`${API_BASE}/users/me/update`, {
+        method: 'PUT',
+        credentials: 'include',
+        body: formDataToSend,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to update profile');
+      }
+
+      const data = await response.json();
+      const updatedUser = data.user || data;
+
+      if (updatedUser) {
+        // Update localStorage
+        localStorage.setItem("qc_user", JSON.stringify({
+          id: updatedUser._id,
+          name: updatedUser.name,
+          email: updatedUser.email,
+          phone: updatedUser.phone,
+          role: updatedUser.role,
+          profilePhoto: updatedUser.profilePhoto,
+        }));
+
+        // Update form data
+        setFormData(prev => ({
+          ...prev,
+          name: updatedUser.name || prev.name,
+          email: updatedUser.email || prev.email,
+          phone: updatedUser.phone || prev.phone,
+          profilePhoto: updatedUser.profilePhoto || prev.profilePhoto,
+          oldPassword: "",
+          newPassword: "",
+        }));
+
+        setSelectedFile(null);
+        setSaveMsg("Profile updated successfully!");
+        setShowEdit(false);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveMsg(""), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      setSaveMsg(err.message || "Failed to update profile. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const filteredBookings = (cancelled) =>
-    mockBookings.filter((b) => b.cancelled === cancelled);
+  const getRoleInfo = (role) => {
+    const roles = {
+      admin: { label: "Admin", icon: Shield, color: "text-red-400 bg-red-400/20", border: "border-red-400/30" },
+      premium: { label: "Premium", icon: Star, color: "text-yellow-400 bg-yellow-400/20", border: "border-yellow-400/30" },
+      user: { label: "User", icon: User, color: "text-blue-400 bg-blue-400/20", border: "border-blue-400/30" }
+    };
+    return roles[role] || roles.user;
+  };
 
-  return (
-    <div className="min-h-screen w-screen bg-gradient-to-r from-blue-900 via-purple-900 to-black">
-      <div className="flex min-h-screen w-full flex-col md:flex-row bg-black/40 text-white">
-        {/* Sidebar */}
-        <div className="w-full md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-gray-700 flex flex-col items-center">
-          <img
-            src={formData.profilePhoto || profileImage}
-            alt="Profile"
-            className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-purple-500"
-          />
-          <h2 className="text-lg font-semibold">{formData.name || "User"}</h2>
-          <p className="text-gray-400">{formData.phone || ""}</p>
-          <p className="text-gray-400 mb-4">{formData.email || ""}</p>
+  const getStatusColor = (status) => {
+    const colors = {
+      confirmed: "text-green-400 bg-green-400/20 border-green-400/30",
+      completed: "text-blue-400 bg-blue-400/20 border-blue-400/30",
+      cancelled: "text-red-400 bg-red-400/20 border-red-400/30",
+      pending: "text-yellow-400 bg-yellow-400/20 border-yellow-400/30"
+    };
+    return colors[status] || colors.pending;
+  };
 
+  const nonCancelled = bookings.filter((b) => b.status !== "cancelled");
+  const cancelled = bookings.filter((b) => b.status === "cancelled");
+  const roleInfo = getRoleInfo(formData.role);
+  const RoleIcon = roleInfo.icon;
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-400 mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
+          <div className="bg-red-500/20 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <X className="w-8 h-8 text-red-400" />
+          </div>
+          <p className="text-red-400 text-lg mb-4">{error}</p>
           <button
-            className="w-full bg-green-700 hover:bg-green-800 text-white py-2 rounded-md mb-2"
-            onClick={() => setShowEdit(true)}
+            onClick={fetchUserData}
+            className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg transition-colors duration-200"
           >
-            Edit Profile
-          </button>
-          <button
-            className={`w-full ${activeTab === "bookings" ? "bg-green-900" : "bg-gray-700"} hover:bg-green-800 text-white py-2 rounded-md`}
-            onClick={() => {
-              setActiveTab("bookings");
-              setShowEdit(false);
-            }}
-          >
-            All Bookings
+            Try Again
           </button>
         </div>
+      </div>
+    );
+  }
 
-        {/* Main Content: Tabs */}
-        <div className="w-full md:w-2/3 p-6 flex flex-col">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6">
-            <button
-              className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${
-                activeTab === "bookings" && !showEdit
-                  ? "border-green-500 text-green-400 bg-black/30"
-                  : "border-transparent text-gray-400 bg-black/10"
-              }`}
-              onClick={() => {
-                setActiveTab("bookings");
-                setShowEdit(false);
-              }}
-            >
-              All Bookings
-            </button>
-            <button
-              className={`px-4 py-2 rounded-t-md font-semibold border-b-2 ${
-                activeTab === "cancelled" && !showEdit
-                  ? "border-red-500 text-red-400 bg-black/30"
-                  : "border-transparent text-gray-400 bg-black/10"
-              }`}
-              onClick={() => {
-                setActiveTab("cancelled");
-                setShowEdit(false);
-              }}
-            >
-              Cancelled
-            </button>
-            <button
-              className={`ml-auto px-4 py-2 rounded-t-md font-semibold border-b-2 ${
-                showEdit
-                  ? "border-purple-500 text-purple-400 bg-black/30"
-                  : "border-transparent text-gray-400 bg-black/10"
-              }`}
-              onClick={() => setShowEdit(true)}
-            >
-              Edit Profile
-            </button>
-          </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen backdrop-blur-sm bg-black/20">
+        <div className="container mx-auto px-4 py-8">
+          <div className="grid lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
+            
+            {/* Profile Sidebar */}
+            <div className="lg:col-span-4">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 p-6 shadow-2xl">
+                <div className="text-center mb-6">
+                  <div className="relative inline-block mb-4">
+                    <div className="w-32 h-32 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 p-1">
+                      <img
+                        src={selectedFile ? URL.createObjectURL(selectedFile) : (formData.profilePhoto || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`)}
+                        alt="Profile"
+                        className="w-full h-full rounded-full object-cover bg-white"
+                      />
+                    </div>
+                    <div className="absolute -bottom-2 -right-2 bg-purple-500 rounded-full p-2 border-4 border-white/20">
+                      <RoleIcon className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  
+                  <h1 className="text-2xl font-bold text-white mb-2">{formData.name || "User"}</h1>
+                  
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border ${roleInfo.color} ${roleInfo.border} text-sm font-medium mb-4`}>
+                    <RoleIcon className="w-4 h-4" />
+                    {roleInfo.label}
+                  </div>
+                  
+                  <div className="space-y-3 text-left">
+                    <div className="flex items-center gap-3 text-gray-300">
+                      <Mail className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm">{formData.email}</span>
+                    </div>
+                    {formData.phone && (
+                      <div className="flex items-center gap-3 text-gray-300">
+                        <Phone className="w-4 h-4 text-purple-400" />
+                        <span className="text-sm">{formData.phone}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-          {/* Tab Content */}
-          {!showEdit && activeTab === "bookings" && (
-            <div className="space-y-4">
-              {filteredBookings(false).length === 0 ? (
-                <div className="text-gray-400">No bookings found.</div>
-              ) : (
-                filteredBookings(false).map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="bg-black/60 rounded-lg p-4 border border-gray-700 flex flex-col gap-2"
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowEdit(true)}
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-purple-500/25"
                   >
-                    <div className="flex items-center gap-2 text-lg font-semibold">
-                      <span className="text-blue-400">📍</span>
-                      {booking.venue}
-                    </div>
-                    <div className="flex gap-4 text-sm text-gray-300">
-                      <span>📅 {booking.date}</span>
-                      <span>⏰ {booking.time}</span>
-                    </div>
-                    <div className="flex gap-2 text-sm text-gray-400">
-                      <span>📌 {booking.location}</span>
-                      <span>
-                        Status: <span className="text-green-400">{booking.status}</span>
-                      </span>
-                    </div>
-                    <div className="flex gap-4 mt-2">
-                      {!booking.isPast && (
-                        <button className="text-red-400 hover:underline">Cancel Booking</button>
+                    <Settings className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setActiveTab("bookings");
+                      setShowEdit(false);
+                    }}
+                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeTab === "bookings" && !showEdit
+                        ? "bg-white/20 text-white shadow-lg"
+                        : "bg-white/5 text-gray-300 hover:bg-white/10"
+                    }`}
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    View Bookings
+                  </button>
+                </div>
+
+                {/* Stats */}
+                <div className="mt-6 grid grid-cols-2 gap-4">
+                  <div className="bg-white/5 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">{nonCancelled.length}</div>
+                    <div className="text-xs text-gray-400">Active Bookings</div>
+                  </div>
+                  <div className="bg-white/5 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">{bookings.filter(b => b.status === 'completed').length}</div>
+                    <div className="text-xs text-gray-400">Completed</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="lg:col-span-8">
+              <div className="bg-white/10 backdrop-blur-lg rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
+                
+                {/* Tab Navigation */}
+                <div className="border-b border-white/10">
+                  <div className="flex">
+                    <button
+                      onClick={() => {
+                        setActiveTab("bookings");
+                        setShowEdit(false);
+                      }}
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        activeTab === "bookings" && !showEdit
+                          ? "text-white bg-white/10"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      All Bookings ({nonCancelled.length})
+                      {activeTab === "bookings" && !showEdit && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-pink-400"></div>
                       )}
-                      <button className="text-purple-400 hover:underline">Write Review</button>
-                    </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveTab("cancelled");
+                        setShowEdit(false);
+                      }}
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        activeTab === "cancelled" && !showEdit
+                          ? "text-white bg-white/10"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      Cancelled ({cancelled.length})
+                      {activeTab === "cancelled" && !showEdit && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-400 to-pink-400"></div>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setShowEdit(true)}
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        showEdit
+                          ? "text-white bg-white/10"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      Edit Profile
+                      {showEdit && (
+                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-purple-400 to-pink-400"></div>
+                      )}
+                    </button>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                </div>
 
-          {!showEdit && activeTab === "cancelled" && (
-            <div className="space-y-4">
-              {filteredBookings(true).length === 0 ? (
-                <div className="text-gray-400">No cancelled bookings.</div>
-              ) : (
-                filteredBookings(true).map((booking) => (
-                  <div
-                    key={booking.id}
-                    className="bg-black/60 rounded-lg p-4 border border-gray-700 flex flex-col gap-2 opacity-60"
-                  >
-                    <div className="flex items-center gap-2 text-lg font-semibold">
-                      <span className="text-blue-400">📍</span>
-                      {booking.venue}
+                {/* Content Area */}
+                <div className="p-6">
+                  {saveMsg && (
+                    <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-300 text-center animate-pulse">
+                      {saveMsg}
                     </div>
-                    <div className="flex gap-4 text-sm text-gray-300">
-                      <span>📅 {booking.date}</span>
-                      <span>⏰ {booking.time}</span>
-                    </div>
-                    <div className="flex gap-2 text-sm text-gray-400">
-                      <span>📌 {booking.location}</span>
-                      <span>
-                        Status: <span className="text-red-400">{booking.status}</span>
-                      </span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+                  )}
 
-          {showEdit && (
-            <div className="max-w-md mx-auto w-full">
-              <form className="space-y-4">
-                <div>
-                  <label className="block text-sm mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 bg-transparent border border-gray-500 rounded-md text-white focus:outline-none focus:border-purple-500"
-                  />
+                  {/* All Bookings Tab */}
+                  {!showEdit && activeTab === "bookings" && (
+                    <div className="space-y-4">
+                      {loadingBookings ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-400"></div>
+                          <span className="ml-3 text-gray-300">Loading bookings...</span>
+                        </div>
+                      ) : bookingsError ? (
+                        <div className="text-center py-12 text-red-400">{bookingsError}</div>
+                      ) : nonCancelled.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400">
+                          <BookOpen className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg">No bookings yet</p>
+                          <p className="text-sm">Your future bookings will appear here</p>
+                        </div>
+                      ) : (
+                        nonCancelled.map((booking) => (
+                          <div
+                            key={booking._id}
+                            className="bg-white/5 rounded-xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-200 hover:shadow-lg"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-purple-500/20 rounded-lg p-2">
+                                  <MapPin className="w-5 h-5 text-purple-400" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-white text-lg">
+                                    {booking.venue?.name || booking.court}
+                                  </h3>
+                                  {booking.venue?.address && (
+                                    <p className="text-gray-400 text-sm">{booking.venue.address}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(booking.status)}`}>
+                                {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-6 text-gray-300">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-purple-400" />
+                                <span className="text-sm">{formatDate(booking.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-purple-400" />
+                                <span className="text-sm">
+                                  {booking.timeSlot?.start} - {booking.timeSlot?.end}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Cancelled Bookings Tab */}
+                  {!showEdit && activeTab === "cancelled" && (
+                    <div className="space-y-4">
+                      {cancelled.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400">
+                          <X className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                          <p className="text-lg">No cancelled bookings</p>
+                        </div>
+                      ) : (
+                        cancelled.map((booking) => (
+                          <div
+                            key={booking._id}
+                            className="bg-red-500/5 rounded-xl p-6 border border-red-500/20 opacity-75"
+                          >
+                            <div className="flex items-start justify-between mb-4">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-red-500/20 rounded-lg p-2">
+                                  <MapPin className="w-5 h-5 text-red-400" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-white text-lg">
+                                    {booking.venue?.name || booking.court}
+                                  </h3>
+                                  {booking.venue?.address && (
+                                    <p className="text-gray-400 text-sm">{booking.venue.address}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="px-3 py-1 rounded-full text-xs font-medium text-red-400 bg-red-400/20 border border-red-400/30">
+                                Cancelled
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center gap-6 text-gray-400">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                <span className="text-sm">{formatDate(booking.date)}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                <span className="text-sm">
+                                  {booking.timeSlot?.start} - {booking.timeSlot?.end}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Edit Profile Form */}
+                  {showEdit && (
+                    <div className="max-w-2xl mx-auto">
+                      <div className="space-y-6">
+                        {/* Profile Photo Section */}
+                        <div className="text-center">
+                          <div className="relative inline-block mb-4">
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-400 to-pink-400 p-1">
+                              <img
+                                src={selectedFile ? URL.createObjectURL(selectedFile) : (formData.profilePhoto || `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`)}
+                                alt="Profile Preview"
+                                className="w-full h-full rounded-full object-cover bg-white"
+                              />
+                            </div>
+                            <label className="absolute -bottom-2 -right-2 bg-purple-500 hover:bg-purple-600 rounded-full p-2 border-4 border-white/20 cursor-pointer transition-colors duration-200">
+                              <Camera className="w-4 h-4 text-white" />
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                              />
+                            </label>
+                          </div>
+                          <p className="text-gray-400 text-sm">Click the camera icon to change your photo</p>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Full Name
+                            </label>
+                            <input
+                              type="text"
+                              name="name"
+                              value={formData.name}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-200"
+                              placeholder="Enter your full name"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Email Address
+                            </label>
+                            <input
+                              type="email"
+                              name="email"
+                              value={formData.email}
+                              readOnly
+                              disabled
+                              className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-gray-400 cursor-not-allowed"
+                              title="Email cannot be changed"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Phone Number
+                            </label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-200"
+                              placeholder="Enter your phone number"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Account Role
+                            </label>
+                            <div className={`flex items-center gap-2 px-4 py-3 rounded-xl border ${roleInfo.color} ${roleInfo.border}`}>
+                              <RoleIcon className="w-4 h-4" />
+                              <span className="font-medium">{roleInfo.label}</span>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              Current Password
+                            </label>
+                            <input
+                              type="password"
+                              name="oldPassword"
+                              value={formData.oldPassword}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-200"
+                              placeholder="Required to change password"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                              New Password
+                            </label>
+                            <input
+                              type="password"
+                              name="newPassword"
+                              value={formData.newPassword}
+                              onChange={handleChange}
+                              className="w-full px-4 py-3 bg-white/5 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-200"
+                              placeholder="Enter new password"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-4 pt-6">
+                          <button
+                            type="button"
+                            onClick={handleReset}
+                            className="flex-1 bg-white/10 hover:bg-white/20 text-white py-3 px-6 rounded-xl font-medium transition-all duration-200 border border-white/20"
+                          >
+                            Reset Changes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSave}
+                            disabled={saving}
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                              saving
+                                ? "bg-purple-500/60 text-white cursor-not-allowed"
+                                : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-purple-500/25"
+                            }`}
+                          >
+                            {saving ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                Saving...
+                              </>
+                            ) : (
+                              "Save Changes"
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm mb-1">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 bg-transparent border border-gray-500 rounded-md text-white focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">Old Password</label>
-                  <input
-                    type="password"
-                    name="oldPassword"
-                    value={formData.oldPassword}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 bg-transparent border border-gray-500 rounded-md text-white focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">New Password</label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    value={formData.newPassword}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 bg-transparent border border-gray-500 rounded-md text-white focus:outline-none focus:border-purple-500"
-                  />
-                </div>
-                {/* Buttons */}
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={handleReset}
-                    className="px-6 py-2 bg-white text-black rounded-md hover:bg-gray-200"
-                  >
-                    Reset
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                  >
-                    Save
-                  </button>
-                </div>
-              </form>
+              </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

@@ -40,7 +40,7 @@ export default function Login() {
                       avatar: user.avatar || null,
                     }));
                 }
-                navigate("/Home");
+                navigate("/");
             }
         } catch (err) {
             setError(err.response?.data?.message || "Login failed!");

@@ -4,12 +4,10 @@ import Signup from "./pages/SignUp";
 import Login from "./pages/Login";
 import OtpVerification from "./pages/OtpVerification";
 import Home from "./pages/Home";
-<<<<<<< HEAD
-=======
 import Profile from "./pages/Profile";
-// import VenueBooking from "./pages/VenueBooking";
-// import VenueDetails from "./pages/VenueDetails";
->>>>>>> fe9f0b212706952e05fd90526d6a39c65216719b
+import AllVenues from "./pages/AllVenues";
+import Navbar from "./components/Navbar";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const App = () => {
   return (
@@ -30,18 +28,21 @@ const App = () => {
       {/* Page Content */}
       <div className="relative z-10">
         <Router>
+          <Navbar />
           <Routes>
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/otp" element={<OtpVerification />} />
-<<<<<<< HEAD
             <Route path="/" element={<Home />} />
-=======
-            <Route path="/" element={<Home/>} />
-            <Route path="/Profile" element={<Profile/>} />
-            {/* <Route path="/VenueBooking" element={<VenueBooking/>} />
-            <Route path="/venue-details" element={<VenueDetails/>} /> */}
->>>>>>> fe9f0b212706952e05fd90526d6a39c65216719b
+            <Route path="/venues" element={<AllVenues />} />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </Router>
       </div>

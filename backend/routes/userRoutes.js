@@ -15,6 +15,7 @@ const {
   getMe,
 } = require("../controllers/user");
 const { protectedUser } = require("../middleware/auth");
+const upload = require("../middleware/upload");
 const router = express.Router();
 
 router.post("/register", sendRegistrationOTP);
@@ -23,7 +24,7 @@ router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.post("/forgot-password", forgotPassword);
 router.get("/me", protectedUser, getMe);
-router.put("/me/update", protectedUser, updateMyProfile);
+router.put("/me/update", protectedUser, upload.single("profilePhoto"), updateMyProfile);
 
 // for admin
 router.get("/", getAllUsers);

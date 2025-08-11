@@ -168,7 +168,17 @@ exports.loginUser = async (req, res) => {
 
 // Logout
 exports.logoutUser = async (req, res) => {
-  res.status(200).json({ success: true, message: "Logged out successfully" });
+  try {
+    res.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+    });
+    res.status(200).json({ success: true, message: "Logged out successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server error" });
+  }
 };
 
 // Forgot Password
@@ -290,19 +300,36 @@ exports.deleteUser = async (req, res) => {
 
 exports.updateMyProfile = async (req, res) => {
   try {
-    // Extract allowed fields from req.body
-    const allowedFields = ["name", "email", "phone", "password"];
+    // Only allow safe fields to be changed directly
+    const { name, phone, password, oldPassword } = req.body;
     const updates = {};
 
-    allowedFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        updates[field] = req.body[field];
-      }
-    });
+    if (typeof name !== "undefined") updates.name = name;
+    if (typeof phone !== "undefined") updates.phone = phone;
 
-    // Handle profile picture upload
+    // Handle password change with old password verification
+    if (typeof password !== "undefined" && password !== "") {
+      // Fetch current user with password to verify
+      const currentUser = await User.findById(req.user._id).select("+password");
+      if (!currentUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      if (!oldPassword) {
+        return res.status(400).json({ error: "Old password is required to change password" });
+      }
+
+      const isOldValid = await comparePassword(oldPassword, currentUser.password);
+      if (!isOldValid) {
+        return res.status(400).json({ error: "Old password is incorrect" });
+      }
+
+      updates.password = await hashPassword(password);
+    }
+
+    // Handle profile picture upload (store at profilePhoto for consistency)
     if (req.file?.path) {
-      updates.avatar = req.file.path; // Cloudinary URL
+      updates.profilePhoto = req.file.path; // Cloudinary URL
     }
 
     const updatedUser = await User.findByIdAndUpdate(req.user._id, updates, {
@@ -314,7 +341,7 @@ exports.updateMyProfile = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    res.json(updatedUser);
+    res.json({ user: updatedUser, success: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }

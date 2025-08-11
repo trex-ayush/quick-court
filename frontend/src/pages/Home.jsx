@@ -3,6 +3,7 @@ import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 import venueImg from "../assets/login.jpg";
 import sportImg from "../assets/sign-up.jpg";
@@ -41,6 +42,7 @@ const getVenuePrimaryImage = (venue) => {
 };
 
 const Home = () => {
+  const navigate = useNavigate();
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -98,38 +100,7 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900">
       {/* Navbar */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b border-slate-200">
-        <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-blue-600 text-white font-bold">
-              Q
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              QuickCourt
-            </h1>
-          </div>
-          <div className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#" className="hover:text-blue-600">
-              Book
-            </a>
-            <a href="#" className="hover:text-blue-600">
-              Venues
-            </a>
-            <a href="#" className="hover:text-blue-600">
-              Sports
-            </a>
-            <a href="#" className="hover:text-blue-600">
-              About
-            </a>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-              Login / Sign Up
-            </button>
-          </div>
-          <button className="md:hidden inline-flex items-center rounded-md border px-3 py-1.5 text-sm">
-            Menu
-          </button>
-        </nav>
-      </header>
+      
 
       {/* Hero */}
       <section
@@ -182,7 +153,7 @@ const Home = () => {
           <h3 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Book Venues
           </h3>
-          <button className="text-blue-600 text-sm hover:underline">
+          <button onClick={() => navigate("/venues")} className="text-blue-600 text-sm hover:underline">
             See all venues
           </button>
         </div>
