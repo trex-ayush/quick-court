@@ -1,15 +1,20 @@
+// routes/booking.js
 const express = require("express");
+const { protectedUser, protectedAdmin } = require("../middleware/auth");
+const {
+  createBooking,
+  getMyBookings,
+  getAllBookings,
+  updateBooking,
+  cancelBooking,
+} = require("../controllers/booking");
+
 const router = express.Router();
 
-// Booking CRUD
-router.get("/" /* getAllBookings */);
-router.get("/:bookingId" /* getBookingById */);
-router.post("/" /* createBooking */);
-router.put("/:bookingId" /* updateBooking */);
-router.delete("/:bookingId" /* cancelBooking */);
-
-// By Venue & User
-router.get("/venue/:venueId" /* getBookingsForVenue */);
-router.get("/user/:userId" /* getBookingsByUser */);
+router.post("/", protectedUser, createBooking);
+router.get("/me", protectedUser, getMyBookings);
+router.get("/", protectedAdmin, getAllBookings);
+router.put("/:id", protectedUser, updateBooking);
+router.delete("/:id", protectedUser, cancelBooking);
 
 module.exports = router;

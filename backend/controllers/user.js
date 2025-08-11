@@ -7,22 +7,40 @@ const {
   hashPassword,
   comparePassword,
 } = require("../utils/helper");
+require("dotenv").config();
 
-const crypto = require("crypto");
-let otpStore = {};
+const otpStore = {}; // Temporary in-memory OTP store
 
 // Send OTP for registration
 exports.sendRegistrationOTP = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, role, adminKey } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Name, email, password, and role are required",
+      });
+    }
+
+    if (!["player", "owner", "admin"].includes(role)) {
       return res
         .status(400)
-        .json({
-          success: false,
-          message: "Name, email, and password are required",
-        });
+        .json({ success: false, message: "Invalid role selected" });
+    }
+
+    // If admin role, verify admin key
+    if (role === "admin") {
+      if (!adminKey) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Admin key is required" });
+      }
+      if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+        return res
+          .status(403)
+          .json({ success: false, message: "Invalid admin key" });
+      }
     }
 
     const existingUser = await User.findOne({ email });
@@ -34,19 +52,23 @@ exports.sendRegistrationOTP = async (req, res) => {
 
     const otp = generateOTP();
 
-    // Store OTP in memory temporarily
+    // Store OTP temporarily in memory
     otpStore[email] = {
       otp,
       name,
       email,
       password,
       phone,
+      role,
       otpExpiry: Date.now() + 5 * 60 * 1000,
     };
 
     await sendOTPEmail(email, otp);
 
-    res.status(200).json({ success: true, message: "OTP sent to your email" });
+    res.status(200).json({
+      success: true,
+      message: "OTP sent to your email for verification",
+    });
   } catch (error) {
     console.error("sendRegistrationOTP Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -58,45 +80,41 @@ exports.verifyRegistrationOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    // Check if OTP exists for the given email
     const userData = otpStore[email];
-    if (!userData)
+    if (!userData) {
       return res
         .status(404)
         .json({ success: false, message: "OTP not found or expired" });
+    }
 
     if (userData.otp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
     if (userData.otpExpiry < Date.now()) {
-      // OTP expired
-      delete otpStore[email]; // Clean up the expired OTP
+      delete otpStore[email];
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
-    // OTP is valid, now create user in the database
-    const { name, email: userEmail, password, phone } = userData;
+    // OTP is valid, create user in DB
+    const { name, email: userEmail, password, phone, role } = userData;
     const hashedPassword = await hashPassword(password);
 
-    // Create the user in DB
     const newUser = await User.create({
       name,
       email: userEmail,
       password: hashedPassword,
       phone,
+      role,
     });
 
-    // Clear OTP from memory after successful verification and user creation
-    delete otpStore[email];
+    delete otpStore[email]; // Clean up after verification
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Account verified and created successfully",
-        user: newUser,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Account verified and created successfully",
+      user: newUser,
+    });
   } catch (error) {
     console.error("verifyRegistrationOTP Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -127,7 +145,18 @@ exports.loginUser = async (req, res) => {
 
     const token = generateJWT(user._id);
 
-    res.status(200).json({ success: true, token, user });
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Logged in successfully",
+      user,
+    });
   } catch (error) {
     console.error("loginUser Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -253,5 +282,37 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error("deleteUser Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+exports.updateMyProfile = async (req, res) => {
+  try {
+    // Extract allowed fields from req.body
+    const allowedFields = ["name", "email", "phone"];
+    const updates = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    });
+
+    // Handle profile picture upload
+    if (req.file?.path) {
+      updates.avatar = req.file.path; // Cloudinary URL
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.user._id, updates, {
+      new: true,
+      runValidators: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.json(updatedUser);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 };
