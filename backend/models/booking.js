@@ -13,9 +13,8 @@ const bookingSchema = new mongoose.Schema(
       required: [true, "Booking must belong to a venue"],
     },
     court: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Court",
-      required: [true, "Booking must specify a court"],
+      type: String,
+      required: true,
     },
     sport: {
       type: mongoose.Schema.Types.ObjectId,

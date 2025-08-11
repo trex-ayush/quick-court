@@ -20,6 +20,10 @@ const venueSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    googleMapLink: {
+      type: String,
+      required: true,
+    },
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -33,8 +37,24 @@ const venueSchema = new mongoose.Schema(
     },
     amenities: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Amenity",
+        type: String,
+        enum: [
+          "parking",
+          "restrooms",
+          "wifi",
+          "cafeteria",
+          "locker_room",
+          "showers",
+          "equipment_rental",
+          "lighting",
+          "first_aid",
+        ],
+      },
+    ],
+    courts: [
+      {
+        name: { type: String, required: true },
+        perHourPrice: { type: Number, required: true },
       },
     ],
     photos: [
@@ -134,6 +154,10 @@ const venueSchema = new mongoose.Schema(
       default: true,
     },
     isVerified: { type: Boolean, default: false },
+    venueType: {
+      type: String,
+      enum: ["indoor", "outdoor"],
+    },
   },
   {
     timestamps: true,
@@ -142,11 +166,25 @@ const venueSchema = new mongoose.Schema(
   }
 );
 
+// Ratings virtual relation
+venueSchema.virtual("ratings", {
+  ref: "Rating",
+  localField: "_id",
+  foreignField: "venue",
+});
+
+// Average rating virtual
+venueSchema.virtual("averageRating").get(function () {
+  if (!this.ratings || this.ratings.length === 0) return 0;
+  const total = this.ratings.reduce((acc, r) => acc + r.score, 0);
+  return Math.round((total / this.ratings.length) * 10) / 10; // one decimal
+});
+
 // Indexes
 venueSchema.index({ name: "text", description: "text" });
 venueSchema.index({ owner: 1 });
 venueSchema.index({ sports: 1 });
 venueSchema.index({ status: 1 });
 
-
-module.exports = mongoose.model("Venue", venueSchema);
+// Avoid model overwrite error by checking if model is already compiled
+module.exports = mongoose.models.Venue || mongoose.model("Venue", venueSchema);
