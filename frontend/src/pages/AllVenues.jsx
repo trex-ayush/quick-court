@@ -264,7 +264,7 @@ const AllVenues = () => {
   // Update total pages when filtered results change
   useEffect(() => {
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-    console.log('Pagination Debug - Filtered length:', filtered.length, 'ITEMS_PER_PAGE:', ITEMS_PER_PAGE, 'Total pages:', totalPages);
+    // console.log('Pagination Debug - Filtered length:', filtered.length, 'ITEMS_PER_PAGE:', ITEMS_PER_PAGE, 'Total pages:', totalPages);
     setTotalPages(totalPages);
   }, [filtered.length]); // Only depend on filtered.length
 
@@ -372,7 +372,7 @@ const AllVenues = () => {
                 </div>
                 
                 {/* Venue Name Search */}
-                <div>
+                {/* <div>
                   <label className="block text-xs font-medium mb-2 text-blue-700">
                     Venue Name
                   </label>
@@ -384,7 +384,7 @@ const AllVenues = () => {
                     onChange={(e) => setSearchQuery(prev => ({ ...prev, venueName: e.target.value }))}
                     onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
                   />
-                </div>
+                </div> */}
                 
                 {/* Search Button */}
                 <button
@@ -399,7 +399,7 @@ const AllVenues = () => {
                     </>
                   ) : (
                     <>
-                      🔍 Search Venues
+                      🔍 Search 
                     </>
                   )}
                 </button>

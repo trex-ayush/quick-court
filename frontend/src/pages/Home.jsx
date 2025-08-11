@@ -246,26 +246,7 @@ const Home = () => {
                         ))}
                       </div>
 
-                      <div className="flex gap-3">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVenueClick(venue.id);
-                          }}
-                          className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                        >
-                          View Details
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleVenueClick(venue.id);
-                          }}
-                          className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-                        >
-                          Book Now
-                        </button>
-                      </div>
+                      
                     </div>
                   </article>
                 );

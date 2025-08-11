@@ -58,6 +58,9 @@ const AddVenue = () => {
     photos: [],
   });
 
+  // Add state for file upload progress
+  const [uploadProgress, setUploadProgress] = useState({});
+
   useEffect(() => {
     const fetchSports = async () => {
       try {
@@ -86,22 +89,22 @@ const AddVenue = () => {
 
   const toggleSport = (id) => {
     setForm((f) => {
-      const sport = sports.find(s => (s._id || s.id) === id);
+      const sport = sports.find((s) => (s._id || s.id) === id);
       const sportName = sport?.name || `Sport ${id}`;
-      
+
       if (f.sports.includes(id)) {
         // Remove sport and its corresponding court
         return {
           ...f,
           sports: f.sports.filter((s) => s !== id),
-          courts: f.courts.filter((c) => c.name !== sportName)
+          courts: f.courts.filter((c) => c.name !== sportName),
         };
       } else {
         // Add sport and create a corresponding court
         return {
           ...f,
           sports: [...f.sports, id],
-          courts: [...f.courts, { name: sportName, perHourPrice: "" }]
+          courts: [...f.courts, { name: sportName, perHourPrice: "" }],
         };
       }
     });
@@ -118,12 +121,60 @@ const AddVenue = () => {
       return { ...f, courts };
     });
   };
-  
+
   const removeCourt = (idx) =>
     setForm((f) => ({ ...f, courts: f.courts.filter((_, i) => i !== idx) }));
 
   const handlePhotoChange = (e) => {
-    setForm((f) => ({ ...f, photos: Array.from(e.target.files || []) }));
+    const newFiles = Array.from(e.target.files || []);
+
+    // Add new files to existing photos array
+    setForm((f) => ({
+      ...f,
+      photos: [...f.photos, ...newFiles],
+    }));
+
+    // Initialize progress for new files
+    const newProgress = {};
+    newFiles.forEach((file) => {
+      newProgress[file.name] = 0;
+    });
+    setUploadProgress((prev) => ({ ...prev, ...newProgress }));
+  };
+
+  const removePhoto = (index) => {
+    setForm((f) => {
+      const newPhotos = [...f.photos];
+      const removedFile = newPhotos.splice(index, 1)[0];
+
+      // Remove progress for this file
+      setUploadProgress((prev) => {
+        const newProgress = { ...prev };
+        delete newProgress[removedFile.name];
+        return newProgress;
+      });
+
+      return { ...f, photos: newPhotos };
+    });
+  };
+
+  const updateUploadProgress = (fileName, progress) => {
+    setUploadProgress((prev) => ({
+      ...prev,
+      [fileName]: progress,
+    }));
+  };
+
+  const simulateUploadProgress = (fileName) => {
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(interval);
+      }
+      updateUploadProgress(fileName, Math.min(progress, 100));
+    }, 200);
   };
 
   const setDayTime = (day, key, value) => {
@@ -170,7 +221,13 @@ const AddVenue = () => {
     setLoading(true);
     setError("");
     setSuccess("");
+
     try {
+      // Simulate upload progress for all files
+      form.photos.forEach((file) => {
+        simulateUploadProgress(file.name);
+      });
+
       const fd = new FormData();
       fd.append("name", form.name);
       fd.append("description", form.description);
@@ -215,6 +272,8 @@ const AddVenue = () => {
       setError(err.response?.data?.error || "Failed to create venue");
     } finally {
       setLoading(false);
+      // Reset upload progress
+      setUploadProgress({});
     }
   };
 
@@ -232,7 +291,7 @@ const AddVenue = () => {
       <section className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb Navigation */}
         <Breadcrumb />
-        
+
         {/* Enhanced Header */}
         <div className="mb-8 text-center">
           <div className="inline-block p-4 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 mb-4">
@@ -558,7 +617,7 @@ const AddVenue = () => {
                   Courts are automatically created based on selected sports
                 </div>
               </div>
-              
+
               {form.courts.length === 0 ? (
                 <div className="text-center py-8 text-slate-500">
                   <div className="text-4xl mb-2">🏸</div>
@@ -575,8 +634,12 @@ const AddVenue = () => {
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">🏆</span>
                           <div>
-                            <div className="font-semibold text-slate-800">{c.name}</div>
-                            <div className="text-sm text-slate-500">Court name (auto-generated from sport)</div>
+                            <div className="font-semibold text-slate-800">
+                              {c.name}
+                            </div>
+                            <div className="text-sm text-slate-500">
+                              Court name (auto-generated from sport)
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -622,7 +685,7 @@ const AddVenue = () => {
               </h2>
               <div>
                 <label className="block text-sm font-semibold mb-2 text-slate-700">
-                  Upload Photos (up to 5)
+                  Upload Photos (up to 10)
                 </label>
                 <div className="relative">
                   <input
@@ -633,16 +696,53 @@ const AddVenue = () => {
                     className="block w-full text-sm file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:bg-violet-500 file:text-white file:font-semibold hover:file:bg-violet-600 file:transition-all border-2 border-dashed border-violet-300 rounded-xl p-4 bg-white"
                   />
                 </div>
+
                 {form.photos?.length > 0 && (
-                  <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+                  <div className="mt-6 space-y-4">
+                    <div className="text-sm text-slate-600 mb-3">
+                      Selected files: {form.photos.length}
+                    </div>
+
                     {form.photos.map((file, idx) => (
-                      <div key={idx} className="relative group">
-                        <img
-                          src={URL.createObjectURL(file)}
-                          alt="preview"
-                          className="h-24 w-full object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 rounded-xl transition-all"></div>
+                      <div
+                        key={idx}
+                        className="bg-white rounded-xl p-4 border-2 border-violet-200 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">📷</span>
+                            <div>
+                              <div className="font-semibold text-slate-800 text-sm">
+                                {file.name}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(idx)}
+                            className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-all"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {/* Upload Progress Bar */}
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div
+                            className="bg-violet-500 h-2 rounded-full transition-all duration-300 ease-out"
+                            style={{
+                              width: `${uploadProgress[file.name] || 0}%`,
+                            }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-slate-600 mt-1 text-right">
+                          {uploadProgress[file.name]
+                            ? `${Math.round(uploadProgress[file.name])}%`
+                            : "Ready"}
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -48,6 +48,7 @@ const Profile = () => {
   const [editEnd, setEditEnd] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [editMsg, setEditMsg] = useState("");
+  const [actionMsg, setActionMsg] = useState("");
 
   // admin quick tools state
   const [adminStats, setAdminStats] = useState(null);
@@ -215,6 +216,28 @@ const Profile = () => {
       setEditMsg(err.message || "Failed to update booking");
     } finally {
       setEditBusy(false);
+    }
+  };
+
+  const cancelMyBooking = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this booking?"))
+      return;
+    try {
+      setActionMsg("");
+      const response = await fetch(`${API_BASE}/bookings/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${response.status}`);
+      }
+      await fetchBookings();
+      setActionMsg("Booking cancelled successfully.");
+      setTimeout(() => setActionMsg(""), 2500);
+    } catch (err) {
+      setActionMsg(err.message || "Failed to cancel booking");
+      setTimeout(() => setActionMsg(""), 3000);
     }
   };
 
@@ -725,6 +748,11 @@ const Profile = () => {
 
                 {/* Content Area */}
                 <div className="p-6">
+                  {actionMsg && (
+                    <div className="mb-4 p-3 rounded-lg border border-emerald-300 text-emerald-200 bg-emerald-500/10">
+                      {actionMsg}
+                    </div>
+                  )}
                   {saveMsg && (
                     <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-xl text-green-300 text-center animate-pulse">
                       {saveMsg}
@@ -811,6 +839,16 @@ const Profile = () => {
                                     >
                                       <Edit className="w-4 h-4" /> Edit
                                     </button>
+                                    {booking.status === "confirmed" && (
+                                      <button
+                                        onClick={() =>
+                                          cancelMyBooking(booking._id)
+                                        }
+                                        className="inline-flex items-center gap-2 rounded-md border border-red-400/40 px-3 py-1.5 text-sm text-red-300 hover:bg-red-500/10"
+                                      >
+                                        <XCircle className="w-4 h-4" /> Cancel
+                                      </button>
+                                    )}
                                   </div>
                                 </>
                               ) : (
