@@ -43,36 +43,45 @@ exports.getAllVenues = async (req, res) => {
 // SEARCH VENUES
 exports.searchVenues = async (req, res) => {
   try {
-    let { query, page = 1, limit = 10 } = req.query;
-    page = parseInt(page);
-    limit = parseInt(limit);
-
-    if (!query) {
-      return res.status(400).json({ error: "Search query is required" });
+    const { city, venueName, page = 1, limit = 10 } = req.query;
+    
+    // Build search query
+    let searchQuery = { status: "approved", isActive: true };
+    
+    if (city) {
+      searchQuery.address = { $regex: city, $options: 'i' };
     }
-
-    const searchFilter = {
-      $text: { $search: query },
-    };
-
-    const venues = await Venue.find(searchFilter)
-      .populate("owner", "name email")
+    
+    if (venueName) {
+      searchQuery.name = { $regex: venueName, $options: 'i' };
+    }
+    
+    // Calculate pagination
+    const skip = (page - 1) * limit;
+    
+    // Execute search with pagination
+    const venues = await Venue.find(searchQuery)
       .populate("sports", "name")
-      .skip((page - 1) * limit)
-      .limit(limit);
-
-    const total = await Venue.countDocuments(searchFilter);
-
+      .populate("amenities")
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+    
+    // Get total count for pagination
+    const total = await Venue.countDocuments(searchQuery);
+    
     res.status(200).json({
-      data: venues,
-      pagination: {
-        total,
-        page,
-        pages: Math.ceil(total / limit),
-      },
+      venues,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page * limit < total,
+      hasPrevPage: page > 1
     });
+    
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Search venues error:", err);
+    res.status(500).json({ error: "Failed to search venues" });
   }
 };
 

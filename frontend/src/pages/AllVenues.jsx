@@ -136,18 +136,24 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
 
 const AllVenues = () => {
   const [venues, setVenues] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchQuery, setSearchQuery] = useState({ city: "", venueName: "" });
+  const [searchLoading, setSearchLoading] = useState(false);
+  
+  // Filter states
+  const [venueType, setVenueType] = useState("all");
+  const [priceRange, setPriceRange] = useState({ min: MIN_PRICE, max: MAX_PRICE });
+  const [selectedSports, setSelectedSports] = useState([]);
   const navigate = useNavigate();
 
-  // Filters
+  // Legacy filter states (keeping for compatibility)
   const [query, setQuery] = useState("");
   const [sport, setSport] = useState("All");
   const [minPrice, setMinPrice] = useState(MIN_PRICE);
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
-  const [venueType, setVenueType] = useState("all"); // all | indoor | outdoor
   const [minRating, setMinRating] = useState(0);
 
   const fetchVenues = async () => {
@@ -169,9 +175,45 @@ const AllVenues = () => {
     } catch (err) {
       setError("Failed to load venues. Please try again.");
       setVenues([]);
-      setPages(1);
+      setTotalPages(1);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const searchVenues = async () => {
+    try {
+      setSearchLoading(true);
+      setError("");
+      
+      // If no search query, fetch all venues
+      if (!searchQuery.city && !searchQuery.venueName) {
+        await fetchVenues();
+        return;
+      }
+      
+      // Build search params
+      const params = {};
+      if (searchQuery.city) params.city = searchQuery.city;
+      if (searchQuery.venueName) params.venueName = searchQuery.venueName;
+      
+      const { data } = await axios.get(`${base}/venues/search`, { params });
+      
+      if (data.venues) {
+        setVenues(data.venues);
+        setTotalPages(data.totalPages || 1);
+        setPage(1); // Reset to first page after search
+      } else {
+        setVenues([]);
+        setTotalPages(1);
+      }
+      
+    } catch (err) {
+      setError("Search failed. Please try again.");
+      setVenues([]);
+      setTotalPages(1);
+    } finally {
+      setSearchLoading(false);
     }
   };
 
@@ -223,20 +265,20 @@ const AllVenues = () => {
   useEffect(() => {
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
     console.log('Pagination Debug - Filtered length:', filtered.length, 'ITEMS_PER_PAGE:', ITEMS_PER_PAGE, 'Total pages:', totalPages);
-    setPages(totalPages);
+    setTotalPages(totalPages);
   }, [filtered.length]); // Only depend on filtered.length
 
   // Reset page when total pages changes
   useEffect(() => {
-    if (page > pages && pages > 0) {
-      console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', pages);
+    if (page > totalPages && totalPages > 0) {
+      console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', totalPages);
       setPage(1);
     }
-  }, [pages, page]);
+  }, [totalPages, page]);
 
   const nextPage = () => {
-    console.log('Next Page Debug - Current page:', page, 'Total pages:', pages, 'Can go next:', page < pages);
-    if (page < pages) {
+    console.log('Next Page Debug - Current page:', page, 'Total pages:', totalPages, 'Can go next:', page < totalPages);
+    if (page < totalPages) {
       const p = page + 1;
       setPage(p);
       // No need to refetch, filtered will update based on current venues
@@ -274,13 +316,27 @@ const AllVenues = () => {
           <p className="text-slate-600 text-sm sm:text-base">
             Discover and Book Nearby Venues for Your Favorite Sports
           </p>
+          
+          {/* Search Summary */}
+          {(searchQuery.city || searchQuery.venueName) && (
+            <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-lg">
+              <div className="text-sm text-blue-800 font-medium">
+                🔍 Search Results for:
+              </div>
+              <div className="text-xs text-blue-700 mt-1">
+                {searchQuery.city && <span className="mr-3">📍 City: {searchQuery.city}</span>}
+                {searchQuery.venueName && <span>🏟️ Venue: {searchQuery.venueName}</span>}
+              </div>
+            </div>
+          )}
+          
           <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
             <span className="flex items-center gap-1">
               📍 <span>{filtered.length} venues found</span>
             </span>
-            {pages > 1 && (
+            {totalPages > 1 && (
               <span className="text-xs text-slate-400">
-                (Page {page} of {pages})
+                (Page {page} of {totalPages})
               </span>
             )}
           </div>
@@ -292,6 +348,74 @@ const AllVenues = () => {
             <div className="space-y-6">
               <div className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
                 🔍 Filter Venues
+              </div>
+
+              {/* Search Section */}
+              <div className="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="text-sm font-semibold text-blue-800">
+                  🔎 Search Venues
+                </div>
+                
+                {/* City Search */}
+                <div>
+                  <label className="block text-xs font-medium mb-2 text-blue-700">
+                    City/Location
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter city name..."
+                    className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={searchQuery.city}
+                    onChange={(e) => setSearchQuery(prev => ({ ...prev, city: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
+                  />
+                </div>
+                
+                {/* Venue Name Search */}
+                <div>
+                  <label className="block text-xs font-medium mb-2 text-blue-700">
+                    Venue Name
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter venue name..."
+                    className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    value={searchQuery.venueName}
+                    onChange={(e) => setSearchQuery(prev => ({ ...prev, venueName: e.target.value }))}
+                    onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
+                  />
+                </div>
+                
+                {/* Search Button */}
+                <button
+                  onClick={searchVenues}
+                  disabled={searchLoading}
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  {searchLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Searching...
+                    </>
+                  ) : (
+                    <>
+                      🔍 Search Venues
+                    </>
+                  )}
+                </button>
+                
+                {/* Clear Search */}
+                {(searchQuery.city || searchQuery.venueName) && (
+                  <button
+                    onClick={() => {
+                      setSearchQuery({ city: "", venueName: "" });
+                      fetchVenues();
+                    }}
+                    className="w-full px-3 py-1 text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+                  >
+                    ✕ Clear Search
+                  </button>
+                )}
               </div>
 
               {/* Enhanced Search */}
@@ -451,99 +575,129 @@ const AllVenues = () => {
 
             {!loading && !error && (
               <>
-                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-                  {paginatedVenues.map((venue) => {
-                    const key = venue.id || venue._id;
-                    const rating = Number(venue?.averageRating || 0).toFixed(1);
-                    const imageSrc = getVenuePrimaryImage(venue);
-                    const sportLabel =
-                      venue?.sports?.[0]?.name ||
-                      (venue?.sports?.length > 1 ? "Multi-sport" : "Sport");
-                    const tags = Array.isArray(venue?.amenities)
-                      ? venue.amenities.slice(0, 3)
-                      : [];
-
-                    return (
-                      <article
-                        key={key}
-                        className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                {paginatedVenues.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🏟️</div>
+                    <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                      {searchQuery.city || searchQuery.venueName ? "No venues found" : "No venues available"}
+                    </h3>
+                    <p className="text-slate-500 mb-6">
+                      {searchQuery.city || searchQuery.venueName 
+                        ? `No venues match your search criteria. Try adjusting your search terms.`
+                        : "There are currently no venues available. Please check back later."
+                      }
+                    </p>
+                    {(searchQuery.city || searchQuery.venueName) && (
+                      <button
+                        onClick={() => {
+                          setSearchQuery({ city: "", venueName: "" });
+                          fetchVenues();
+                        }}
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                       >
-                        <div className="relative overflow-hidden">
-                          <img
-                            src={imageSrc}
-                            alt={venue?.name || "Venue"}
-                            className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium">
-                            <span className="text-yellow-400">⭐</span>
-                            <span>{rating}</span>
-                          </div>
-                          <div className="absolute right-4 top-4">
-                            <span className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-slate-700">
-                              {sportLabel}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="p-6">
-                          <div className="mb-3">
-                            <h4 className="font-bold text-xl leading-tight text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
-                              {venue?.name}
-                            </h4>
-                            <p className="text-sm text-slate-500 flex items-center gap-1">
-                              <span>📍</span>
-                              {venue?.address}
-                            </p>
-                          </div>
-
-                          {tags.length > 0 && (
-                            <div className="mb-4 flex flex-wrap gap-2">
-                              {tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="inline-block rounded-full bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="flex items-center justify-end gap-3">
-                            <button
-                              onClick={() => navigate(`/venues/${key}`)}
-                              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
-                            >
-                              👀 View Details
-                            </button>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  })}
-                </div>
-
-                {/* Enhanced Pagination */}
-                <div className="mt-12 flex items-center justify-center gap-4">
-                  <button
-                    onClick={prevPage}
-                    disabled={page <= 1}
-                    className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
-                  >
-                    ⬅️ Previous
-                  </button>
-                  <div className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold">
-                    Page {page} of {pages}
+                        🔄 Show All Venues
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={nextPage}
-                    disabled={page >= pages}
-                    className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
-                  >
-                    Next ➡️
-                  </button>
-                </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+                      {paginatedVenues.map((venue) => {
+                        const key = venue.id || venue._id;
+                        const rating = Number(venue?.averageRating || 0).toFixed(1);
+                        const imageSrc = getVenuePrimaryImage(venue);
+                        const sportLabel =
+                          venue?.sports?.[0]?.name ||
+                          (venue?.sports?.length > 1 ? "Multi-sport" : "Sport");
+                        const tags = Array.isArray(venue?.amenities)
+                          ? venue.amenities.slice(0, 3)
+                          : [];
+
+                        return (
+                          <article
+                            key={key}
+                            className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                          >
+                            <div className="relative overflow-hidden">
+                              <img
+                                src={imageSrc}
+                                alt={venue?.name || "Venue"}
+                                className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium">
+                                <span className="text-yellow-400">⭐</span>
+                                <span>{rating}</span>
+                              </div>
+                              <div className="absolute right-4 top-4">
+                                <span className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-slate-700">
+                                  {sportLabel}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="p-6">
+                              <div className="mb-3">
+                                <h4 className="font-bold text-xl leading-tight text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                                  {venue?.name}
+                                </h4>
+                                <p className="text-sm text-slate-500 flex items-center gap-1">
+                                  <span>📍</span>
+                                  {venue?.address}
+                                </p>
+                              </div>
+
+                              {tags.length > 0 && (
+                                <div className="mb-4 flex flex-wrap gap-2">
+                                  {tags.map((tag) => (
+                                    <span
+                                      key={tag}
+                                      className="inline-block rounded-full bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
+                                    >
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() => navigate(`/venues/${key}`)}
+                                  className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                                >
+                                  👀 View Details
+                                </button>
+                              </div>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    {/* Enhanced Pagination - Only show when there are venues */}
+                    {paginatedVenues.length > 0 && (
+                      <div className="mt-12 flex items-center justify-center gap-4">
+                        <button
+                          onClick={prevPage}
+                          disabled={page <= 1}
+                          className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
+                        >
+                          ⬅️ Previous
+                        </button>
+                        <div className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold">
+                          Page {page} of {totalPages}
+                        </div>
+                        <button
+                          onClick={nextPage}
+                          disabled={page >= totalPages}
+                          className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
+                        >
+                          Next ➡️
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </>
             )}
           </div>

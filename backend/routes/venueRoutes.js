@@ -23,6 +23,7 @@ const upload = require("../middleware/upload");
 const router = express.Router();
 
 router.get("/", getAllVenues);
+// Search venues
 router.get("/search", searchVenues);
 router.get("/availability", checkVenueAvailability);
 router.get("/my", protectedOwner, getMyVenues);
