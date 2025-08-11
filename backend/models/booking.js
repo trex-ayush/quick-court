@@ -108,12 +108,11 @@ bookingSchema.virtual("isActive").get(function () {
   );
 });
 
-// Auto-populate references
+// Auto-populate references (only valid refs)
 bookingSchema.pre(/^find/, function (next) {
-  this.populate({
-    path: "user venue court sport participants",
-    select: "-__v -password -resetToken -otp",
-  });
+  this.populate({ path: "user", select: "name email" })
+    .populate({ path: "venue", select: "name address" })
+    .populate({ path: "sport", select: "name" });
   next();
 });
 

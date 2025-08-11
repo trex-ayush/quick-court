@@ -11,18 +11,28 @@ const {
   toggleBanVenue,
   getVenueWithRatings,
 } = require("../controllers/venue");
-const { protectedOwner, protectedAdmin, protectedUser } = require("../middleware/auth");
+const {
+  protectedOwner,
+  protectedAdmin,
+  protectedUser,
+} = require("../middleware/auth");
 const upload = require("../middleware/upload");
 const router = express.Router();
 
 router.get("/", getAllVenues);
 router.get("/search", searchVenues);
 router.get("/:venueId", getVenueById);
-router.post("/createVenue", protectedOwner, protectedAdmin,upload.array("photos", 5), createVenue);
-router.put("/:venueId", protectedOwner, protectedAdmin, updateVenue);
-router.delete("/:venueId", protectedOwner, protectedAdmin, deleteVenue);
+// Allow owners or admins to create (protectedOwner already allows admin)
+router.post(
+  "/createVenue",
+  protectedOwner,
+  upload.array("photos", 5),
+  createVenue
+);
+// Allow owners or admins to update/delete their venue; admins pass protectedOwner too
+router.put("/:venueId", protectedOwner, updateVenue);
+router.delete("/:venueId", protectedOwner, deleteVenue);
 router.get("/:id", getVenueWithRatings);
-
 
 router.post("/:venueId/approve", protectedAdmin, approveVenue);
 router.post("/:venueId/reject", protectedAdmin, rejectVenue);

@@ -8,6 +8,9 @@ import Profile from "./pages/Profile";
 import AllVenues from "./pages/AllVenues";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AddVenue from "./pages/AddVenue";
+import OwnerAdminRoute from "./components/OwnerAdminRoute";
+import VenueDetails from "./pages/VenueDetails";
 
 const App = () => {
   return (
@@ -35,6 +38,15 @@ const App = () => {
             <Route path="/otp" element={<OtpVerification />} />
             <Route path="/" element={<Home />} />
             <Route path="/venues" element={<AllVenues />} />
+            <Route path="/venues/:id" element={<VenueDetails />} />
+            <Route
+              path="/venues/new"
+              element={
+                <OwnerAdminRoute>
+                  <AddVenue />
+                </OwnerAdminRoute>
+              }
+            />
             <Route
               path="/profile"
               element={

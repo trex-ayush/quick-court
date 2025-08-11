@@ -100,7 +100,6 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white text-slate-900">
       {/* Navbar */}
-      
 
       {/* Hero */}
       <section
@@ -153,7 +152,10 @@ const Home = () => {
           <h3 className="text-2xl sm:text-3xl font-bold tracking-tight">
             Book Venues
           </h3>
-          <button onClick={() => navigate("/venues")} className="text-blue-600 text-sm hover:underline">
+          <button
+            onClick={() => navigate("/venues")}
+            className="text-blue-600 text-sm hover:underline"
+          >
             See all venues
           </button>
         </div>

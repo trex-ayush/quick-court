@@ -36,18 +36,23 @@ const Navbar = () => {
     </Link>
   );
 
+  const canCreate = user && (user.role === "owner" || user.role === "admin");
+
   return (
     <nav className="w-full backdrop-blur supports-[backdrop-filter]:bg-black/40 bg-black/30 border-b border-white/10 sticky top-0 z-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-14 items-center justify-between">
           {/* Left: Brand */}
           <div className="flex items-center gap-2">
-            <Link to="/" className="text-white font-bold tracking-wide">QUICKCOURT</Link>
+            <Link to="/" className="text-white font-bold tracking-wide">
+              QUICKCOURT
+            </Link>
           </div>
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-2">
             <NavLink to="/">Venues</NavLink>
+            {canCreate && <NavLink to="/venues/new">Add Venue</NavLink>}
             <NavLink to="/Profile">Profile</NavLink>
             {user ? (
               <button
@@ -85,6 +90,7 @@ const Navbar = () => {
         <div className="md:hidden border-t border-white/10">
           <div className="px-2 pt-2 pb-3 space-y-1">
             <NavLink to="/">Venues</NavLink>
+            {canCreate && <NavLink to="/venues/new">Add Venue</NavLink>}
             <NavLink to="/Profile">Profile</NavLink>
             {user ? (
               <button

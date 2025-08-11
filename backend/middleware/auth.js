@@ -31,10 +31,13 @@ const verifyToken = async (req, res, next) => {
 exports.protectedUser = [
   verifyToken,
   (req, res, next) => {
-    if (req.user.role !== "player" && req.user.role !== "admin") {
+    const role = req.user.role;
+    if (role !== "player" && role !== "admin" && role !== "owner") {
       return res
         .status(403)
-        .json({ error: "Only players or admins can access this route" });
+        .json({
+          error: "Only players, owners or admins can access this route",
+        });
     }
     next();
   },

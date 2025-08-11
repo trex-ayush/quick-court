@@ -35,7 +35,10 @@ exports.createBooking = async (req, res) => {
 // Get my bookings
 exports.getMyBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).sort({ date: -1 });
+    const bookings = await Booking.find({ user: req.user._id }).sort({
+      date: -1,
+    });
+    // Return raw array to align with current frontend usage
     res.status(200).json(bookings);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -55,11 +58,16 @@ exports.getAllBookings = async (req, res) => {
 // Update booking (e.g., change time slot)
 exports.updateBooking = async (req, res) => {
   try {
-    const booking = await Booking.findOne({ _id: req.params.id, user: req.user._id });
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     if (booking.status !== "confirmed") {
-      return res.status(400).json({ error: "Only confirmed bookings can be updated" });
+      return res
+        .status(400)
+        .json({ error: "Only confirmed bookings can be updated" });
     }
 
     Object.assign(booking, req.body);
@@ -74,7 +82,10 @@ exports.updateBooking = async (req, res) => {
 // Cancel booking
 exports.cancelBooking = async (req, res) => {
   try {
-    const booking = await Booking.findOne({ _id: req.params.id, user: req.user._id });
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      user: req.user._id,
+    });
     if (!booking) return res.status(404).json({ error: "Booking not found" });
 
     booking.status = "cancelled";
