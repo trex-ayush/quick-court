@@ -4,6 +4,12 @@ import Signup from "./pages/SignUp";
 import Login from "./pages/Login";
 import OtpVerification from "./pages/OtpVerification";
 import Home from "./pages/Home";
+<<<<<<< HEAD
+=======
+import Profile from "./pages/Profile";
+// import VenueBooking from "./pages/VenueBooking";
+// import VenueDetails from "./pages/VenueDetails";
+>>>>>>> fe9f0b212706952e05fd90526d6a39c65216719b
 
 const App = () => {
   return (
@@ -28,7 +34,14 @@ const App = () => {
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/otp" element={<OtpVerification />} />
+<<<<<<< HEAD
             <Route path="/" element={<Home />} />
+=======
+            <Route path="/" element={<Home/>} />
+            <Route path="/Profile" element={<Profile/>} />
+            {/* <Route path="/VenueBooking" element={<VenueBooking/>} />
+            <Route path="/venue-details" element={<VenueDetails/>} /> */}
+>>>>>>> fe9f0b212706952e05fd90526d6a39c65216719b
           </Routes>
         </Router>
       </div>

@@ -152,10 +152,13 @@ exports.loginUser = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
+    // Return sanitized user object without password
+    const safeUser = await User.findById(user._id).select("-password");
+
     res.status(200).json({
       success: true,
       message: "Logged in successfully",
-      user,
+      user: safeUser,
     });
   } catch (error) {
     console.error("loginUser Error:", error);
@@ -314,5 +317,19 @@ exports.updateMyProfile = async (req, res) => {
     res.json(updatedUser);
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+};
+
+// Get currently authenticated user
+exports.getMe = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user._id).select("-password");
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+    res.status(200).json({ success: true, user: currentUser });
+  } catch (error) {
+    console.error("getMe Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };

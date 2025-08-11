@@ -21,13 +21,25 @@ export default function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post(`${base}/users/login`, {
-                email: form.email,
-                password: form.password,
-            });
+            const response = await axios.post(
+                `${base}/users/login`,
+                { email: form.email, password: form.password },
+                { withCredentials: true }
+            );
 
             if (response.status === 200) {
-                // You can store token/user info here if backend sends it
+                const user = response.data?.user;
+                if (user) {
+                    // persist only safe fields
+                    localStorage.setItem("qc_user", JSON.stringify({
+                      id: user._id,
+                      name: user.name,
+                      email: user.email,
+                      phone: user.phone,
+                      role: user.role,
+                      avatar: user.avatar || null,
+                    }));
+                }
                 navigate("/Home");
             }
         } catch (err) {
