@@ -288,7 +288,7 @@ exports.deleteUser = async (req, res) => {
 exports.updateMyProfile = async (req, res) => {
   try {
     // Extract allowed fields from req.body
-    const allowedFields = ["name", "email", "phone"];
+    const allowedFields = ["name", "email", "phone", "password"];
     const updates = {};
 
     allowedFields.forEach((field) => {
