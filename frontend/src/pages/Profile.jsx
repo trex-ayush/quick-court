@@ -49,12 +49,39 @@ const Profile = () => {
   const [editBusy, setEditBusy] = useState(false);
   const [editMsg, setEditMsg] = useState("");
 
+  // admin quick tools state
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminUserId, setAdminUserId] = useState("");
+  const [adminVenueId, setAdminVenueId] = useState("");
+  const [adminReason, setAdminReason] = useState("");
+  const [adminBusy, setAdminBusy] = useState(false);
+  const [adminMsg, setAdminMsg] = useState("");
+
   const API_BASE = base;
 
   useEffect(() => {
     fetchUserData();
     fetchBookings();
   }, []);
+
+  // fetch admin stats if current user is admin
+  useEffect(() => {
+    const isAdmin = formData.role === "admin";
+    if (!isAdmin) return;
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/users/stats/admin`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (res.ok) {
+          const js = await res.json();
+          setAdminStats(js?.data || null);
+        }
+      } catch {}
+    };
+    fetchStats();
+  }, [formData.role]);
 
   const fetchUserData = async () => {
     try {
@@ -386,7 +413,7 @@ const Profile = () => {
                           selectedFile
                             ? URL.createObjectURL(selectedFile)
                             : formData.profilePhoto ||
-                            `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
+                              `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
                         }
                         alt="Profile"
                         className="w-full h-full rounded-full object-cover bg-white"
@@ -437,10 +464,11 @@ const Profile = () => {
                       setShowEdit(false);
                       fetchBookings();
                     }}
-                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === "bookings" && !showEdit
+                    className={`w-full py-3 px-4 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                      activeTab === "bookings" && !showEdit
                         ? "bg-white/20 text-white shadow-lg"
                         : "bg-white/5 text-gray-300 hover:bg-white/10"
-                      }`}
+                    }`}
                   >
                     <BookOpen className="w-4 h-4" />
                     View Bookings
@@ -462,6 +490,182 @@ const Profile = () => {
                     <div className="text-xs text-gray-400">Completed</div>
                   </div>
                 </div>
+
+                {formData.role === "admin" && (
+                  <div className="mt-6 space-y-4">
+                    <div className="bg-white/10 rounded-2xl border border-white/20 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-white font-semibold">
+                          Admin Tools
+                        </div>
+                        <button
+                          onClick={() =>
+                            (window.location.href = "/admin/dashboard")
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs hover:from-purple-600 hover:to-pink-600"
+                        >
+                          Open Dashboard
+                        </button>
+                      </div>
+                      {adminStats && (
+                        <div className="grid grid-cols-3 gap-3 text-center mb-3">
+                          <div className="bg-white/5 rounded-lg p-2">
+                            <div className="text-white text-lg font-bold">
+                              {adminStats?.users?.total || 0}
+                            </div>
+                            <div className="text-[11px] text-gray-300">
+                              Users
+                            </div>
+                          </div>
+                          <div className="bg-white/5 rounded-lg p-2">
+                            <div className="text-white text-lg font-bold">
+                              {adminStats?.venues?.pending || 0}
+                            </div>
+                            <div className="text-[11px] text-gray-300">
+                              Pending Venues
+                            </div>
+                          </div>
+                          <div className="bg-white/5 rounded-lg p-2">
+                            <div className="text-white text-lg font-bold">
+                              {adminStats?.bookings?.total || 0}
+                            </div>
+                            <div className="text-[11px] text-gray-300">
+                              Bookings
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {adminMsg && (
+                        <div className="mb-2 text-xs text-emerald-300">
+                          {adminMsg}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">
+                            Quick User Ban/Unban
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              value={adminUserId}
+                              onChange={(e) => setAdminUserId(e.target.value)}
+                              placeholder="Enter User ID"
+                              className="flex-1 rounded-lg bg-white/5 border border-white/20 px-3 py-2 text-white text-xs"
+                            />
+                            <button
+                              disabled={adminBusy || !adminUserId}
+                              onClick={async () => {
+                                try {
+                                  setAdminBusy(true);
+                                  setAdminMsg("");
+                                  const res = await fetch(
+                                    `${API_BASE}/users/${adminUserId}/toggle-ban`,
+                                    {
+                                      method: "POST",
+                                      credentials: "include",
+                                    }
+                                  );
+                                  if (!res.ok) throw new Error("Action failed");
+                                  setAdminMsg("User status toggled");
+                                  setAdminUserId("");
+                                } catch (e) {
+                                  setAdminMsg("Failed to toggle user status");
+                                } finally {
+                                  setAdminBusy(false);
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs disabled:opacity-50"
+                            >
+                              Ban/Unban
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">
+                            Quick Venue Approve/Reject
+                          </label>
+                          <div className="flex gap-2 mb-2">
+                            <input
+                              value={adminVenueId}
+                              onChange={(e) => setAdminVenueId(e.target.value)}
+                              placeholder="Enter Venue ID"
+                              className="flex-1 rounded-lg bg-white/5 border border-white/20 px-3 py-2 text-white text-xs"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              disabled={adminBusy || !adminVenueId}
+                              onClick={async () => {
+                                try {
+                                  setAdminBusy(true);
+                                  setAdminMsg("");
+                                  const res = await fetch(
+                                    `${API_BASE}/venues/${adminVenueId}/approve`,
+                                    {
+                                      method: "POST",
+                                      credentials: "include",
+                                    }
+                                  );
+                                  if (!res.ok)
+                                    throw new Error("Approve failed");
+                                  setAdminMsg("Venue approved");
+                                  setAdminVenueId("");
+                                } catch (e) {
+                                  setAdminMsg("Failed to approve venue");
+                                } finally {
+                                  setAdminBusy(false);
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              disabled={adminBusy || !adminVenueId}
+                              onClick={async () => {
+                                try {
+                                  setAdminBusy(true);
+                                  setAdminMsg("");
+                                  const res = await fetch(
+                                    `${API_BASE}/venues/${adminVenueId}/reject`,
+                                    {
+                                      method: "POST",
+                                      credentials: "include",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        reason:
+                                          adminReason || "Insufficient details",
+                                      }),
+                                    }
+                                  );
+                                  if (!res.ok) throw new Error("Reject failed");
+                                  setAdminMsg("Venue rejected");
+                                  setAdminVenueId("");
+                                  setAdminReason("");
+                                } catch (e) {
+                                  setAdminMsg("Failed to reject venue");
+                                } finally {
+                                  setAdminBusy(false);
+                                }
+                              }}
+                              className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                          <input
+                            value={adminReason}
+                            onChange={(e) => setAdminReason(e.target.value)}
+                            placeholder="Optional rejection reason"
+                            className="mt-2 w-full rounded-lg bg-white/5 border border-white/20 px-3 py-2 text-white text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -476,10 +680,11 @@ const Profile = () => {
                         setActiveTab("bookings");
                         setShowEdit(false);
                       }}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${activeTab === "bookings" && !showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        activeTab === "bookings" && !showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                        }`}
+                      }`}
                     >
                       All Bookings ({nonCancelled.length})
                       {activeTab === "bookings" && !showEdit && (
@@ -491,10 +696,11 @@ const Profile = () => {
                         setActiveTab("cancelled");
                         setShowEdit(false);
                       }}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${activeTab === "cancelled" && !showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        activeTab === "cancelled" && !showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                        }`}
+                      }`}
                     >
                       Cancelled ({cancelled.length})
                       {activeTab === "cancelled" && !showEdit && (
@@ -503,10 +709,11 @@ const Profile = () => {
                     </button>
                     <button
                       onClick={() => setShowEdit(true)}
-                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${showEdit
+                      className={`flex-1 px-6 py-4 text-center font-medium transition-all duration-200 relative ${
+                        showEdit
                           ? "text-white bg-white/10"
                           : "text-gray-400 hover:text-white hover:bg-white/5"
-                        }`}
+                      }`}
                     >
                       Edit Profile
                       {showEdit && (
@@ -749,7 +956,7 @@ const Profile = () => {
                                   selectedFile
                                     ? URL.createObjectURL(selectedFile)
                                     : formData.profilePhoto ||
-                                    `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
+                                      `https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face`
                                 }
                                 alt="Profile Preview"
                                 className="w-full h-full rounded-full object-cover bg-white"
@@ -872,10 +1079,11 @@ const Profile = () => {
                             type="button"
                             onClick={handleSave}
                             disabled={saving}
-                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${saving
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                              saving
                                 ? "bg-purple-500/60 text-white cursor-not-allowed"
                                 : "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg hover:shadow-purple-500/25"
-                              }`}
+                            }`}
                           >
                             {saving ? (
                               <>
