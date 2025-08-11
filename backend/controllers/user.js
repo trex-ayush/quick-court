@@ -2,15 +2,15 @@ const User = require("../models/user");
 const {
   generateOTP,
   sendOTPEmail,
-  generateRandomToken,
-  generateJWT,
   hashPassword,
-  comparePassword,
 } = require("../utils/helper");
 
 const crypto = require("crypto");
 
-// Store pending registrations in DB fields, not memory
+// Store OTP temporarily in memory (You can replace this with Redis or a database for production)
+let otpStore = {};
+
+// Send OTP for registration
 exports.sendRegistrationOTP = async (req, res) => {
   try {
     const { name, email, password, phone } = req.body;
@@ -24,18 +24,10 @@ exports.sendRegistrationOTP = async (req, res) => {
       return res.status(400).json({ success: false, message: "Email already registered" });
     }
 
-    const hashedPassword = await hashPassword(password);
     const otp = generateOTP();
 
-    // Create temp user in DB with OTP
-    await User.create({
-      name,
-      email,
-      password: hashedPassword,
-      phone,
-      otp,
-      otpExpiry: Date.now() + 5 * 60 * 1000, // 5 minutes
-    });
+    // Store OTP in memory temporarily
+    otpStore[email] = { otp, name, email, password, phone, otpExpiry: Date.now() + 5 * 60 * 1000 };
 
     await sendOTPEmail(email, otp);
 
@@ -51,25 +43,36 @@ exports.verifyRegistrationOTP = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    const user = await User.findOne({ email }).select("+otp +otpExpiry +password");
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    // Check if OTP exists for the given email
+    const userData = otpStore[email];
+    if (!userData) return res.status(404).json({ success: false, message: "OTP not found or expired" });
 
-    if (user.isBanned) return res.status(403).json({ success: false, message: "Account banned" });
-
-    if (!user.otp || user.otp !== otp) {
+    if (userData.otp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
-    if (user.otpExpiry < Date.now()) {
+    if (userData.otpExpiry < Date.now()) {
+      // OTP expired
+      delete otpStore[email]; // Clean up the expired OTP
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
-    // Clear OTP fields
-    user.otp = undefined;
-    user.otpExpiry = undefined;
-    await user.save();
+    // OTP is valid, now create user in the database
+    const { name, email: userEmail, password, phone } = userData;
+    const hashedPassword = await hashPassword(password);
 
-    res.status(200).json({ success: true, message: "Account verified successfully" });
+    // Create the user in DB
+    const newUser = await User.create({
+      name,
+      email: userEmail,
+      password: hashedPassword,
+      phone,
+    });
+
+    // Clear OTP from memory after successful verification and user creation
+    delete otpStore[email];
+
+    res.status(200).json({ success: true, message: "Account verified and created successfully", user: newUser });
   } catch (error) {
     console.error("verifyRegistrationOTP Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
