@@ -1,4 +1,65 @@
 const User = require("../models/user");
+// Admin: toggle ban/unban user
+exports.toggleBanUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId);
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    user.isBanned = !user.isBanned;
+    await user.save();
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    console.error("toggleBanUser Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+// Admin: basic platform stats
+exports.getAdminStats = async (req, res) => {
+  try {
+    const Booking = require("../models/booking");
+    const Venue = require("../models/venue");
+    const totalUsers = await User.countDocuments();
+    const totalBanned = await User.countDocuments({ isBanned: true });
+    const totalVenues = await Venue.countDocuments();
+    const approvedVenues = await Venue.countDocuments({ status: "approved" });
+    const pendingVenues = await Venue.countDocuments({ status: "pending" });
+    const totalBookings = await Booking.countDocuments();
+
+    // recent 7 days bookings trend (count per day)
+    const since = new Date();
+    since.setDate(since.getDate() - 6);
+    const trend = await Booking.aggregate([
+      { $match: { createdAt: { $gte: since } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users: { total: totalUsers, banned: totalBanned },
+        venues: {
+          total: totalVenues,
+          approved: approvedVenues,
+          pending: pendingVenues,
+        },
+        bookings: { total: totalBookings, trend },
+      },
+    });
+  } catch (error) {
+    console.error("getAdminStats Error:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 const {
   generateOTP,
   sendOTPEmail,
@@ -316,10 +377,15 @@ exports.updateMyProfile = async (req, res) => {
       }
 
       if (!oldPassword) {
-        return res.status(400).json({ error: "Old password is required to change password" });
+        return res
+          .status(400)
+          .json({ error: "Old password is required to change password" });
       }
 
-      const isOldValid = await comparePassword(oldPassword, currentUser.password);
+      const isOldValid = await comparePassword(
+        oldPassword,
+        currentUser.password
+      );
       if (!isOldValid) {
         return res.status(400).json({ error: "Old password is incorrect" });
       }
@@ -352,7 +418,9 @@ exports.getMe = async (req, res) => {
   try {
     const currentUser = await User.findById(req.user._id).select("-password");
     if (!currentUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
     res.status(200).json({ success: true, user: currentUser });
   } catch (error) {

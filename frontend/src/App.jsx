@@ -9,6 +9,7 @@ import VenueDetails from "./pages/VenueDetails";
 import AddVenue from "./pages/AddVenue";
 import AllVenues from "./pages/AllVenues";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import UpdateVenue from "./pages/UpdateVenue";
 import ProtectedRoute from "./components/ProtectedRoute";
 import OwnerAdminRoute from "./components/OwnerAdminRoute";
@@ -55,6 +56,14 @@ function App() {
             element={
               <OwnerAdminRoute>
                 <OwnerDashboard />
+              </OwnerAdminRoute>
+            }
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <OwnerAdminRoute>
+                <AdminDashboard />
               </OwnerAdminRoute>
             }
           />

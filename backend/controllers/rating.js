@@ -2,6 +2,7 @@ const Rating = require("../models/rating");
 
 // controllers/rating.js
 const Venue = require("../models/venue");
+const Booking = require("../models/booking");
 
 async function updateVenueAverage(venueId) {
   const result = await Rating.aggregate([
@@ -31,6 +32,21 @@ async function updateVenueAverage(venueId) {
 exports.addRating = async (req, res) => {
   try {
     const { venueId, score, comment } = req.body;
+
+    // Ensure user has a past or completed booking for this venue
+    const now = new Date();
+    const hasEligibleBooking = await Booking.exists({
+      user: req.user._id,
+      venue: venueId,
+      status: { $in: ["confirmed", "completed"] },
+      date: { $lt: now }, // booking date in the past
+    });
+
+    if (!hasEligibleBooking) {
+      return res.status(403).json({
+        error: "You can rate a venue only after a completed booking.",
+      });
+    }
 
     const rating = await Rating.create({
       user: req.user._id,

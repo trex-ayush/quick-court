@@ -11,10 +11,10 @@ exports.getAllVenues = async (req, res) => {
 
     const filter = {};
     if (status) filter.status = status;
-    
+
     // For regular users, only show active venues
     // For owners and admins, show all venues
-    if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'admin')) {
+    if (!req.user || (req.user.role !== "owner" && req.user.role !== "admin")) {
       filter.isActive = true;
     }
 
@@ -44,21 +44,21 @@ exports.getAllVenues = async (req, res) => {
 exports.searchVenues = async (req, res) => {
   try {
     const { city, venueName, page = 1, limit = 10 } = req.query;
-    
+
     // Build search query
     let searchQuery = { status: "approved", isActive: true };
-    
+
     if (city) {
-      searchQuery.address = { $regex: city, $options: 'i' };
+      searchQuery.address = { $regex: city, $options: "i" };
     }
-    
+
     if (venueName) {
-      searchQuery.name = { $regex: venueName, $options: 'i' };
+      searchQuery.name = { $regex: venueName, $options: "i" };
     }
-    
+
     // Calculate pagination
     const skip = (page - 1) * limit;
-    
+
     // Execute search with pagination
     const venues = await Venue.find(searchQuery)
       .populate("sports", "name")
@@ -66,19 +66,18 @@ exports.searchVenues = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
-    
+
     // Get total count for pagination
     const total = await Venue.countDocuments(searchQuery);
-    
+
     res.status(200).json({
       venues,
       total,
       page: parseInt(page),
       totalPages: Math.ceil(total / limit),
       hasNextPage: page * limit < total,
-      hasPrevPage: page > 1
+      hasPrevPage: page > 1,
     });
-    
   } catch (err) {
     console.error("Search venues error:", err);
     res.status(500).json({ error: "Failed to search venues" });
@@ -249,7 +248,7 @@ exports.updateVenue = async (req, res) => {
       try {
         body.amenities = JSON.parse(body.amenities);
       } catch (e) {
-        body.amenities = body.amenities.split(',').map(a => a.trim());
+        body.amenities = body.amenities.split(",").map((a) => a.trim());
       }
     }
 
@@ -258,7 +257,7 @@ exports.updateVenue = async (req, res) => {
       try {
         body.sports = JSON.parse(body.sports);
       } catch (e) {
-        body.sports = body.sports.split(',').map(s => s.trim());
+        body.sports = body.sports.split(",").map((s) => s.trim());
       }
     }
 
@@ -268,7 +267,7 @@ exports.updateVenue = async (req, res) => {
     if (req.files?.length) {
       const photoUrls = req.files.map((file) => file.path);
       // If replacing all photos, use $set, otherwise append
-      if (body.replacePhotos === 'true') {
+      if (body.replacePhotos === "true") {
         updates.photos = photoUrls;
       } else {
         updates.$push = { photos: { $each: photoUrls } };
@@ -394,9 +393,16 @@ exports.toggleBanVenue = async (req, res) => {
 
 exports.getVenueWithRatings = async (req, res) => {
   try {
-    const venue = await Venue.findById(req.params.id).populate({
+    const { venueId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      return res.status(400).json({ error: "Invalid venue ID" });
+    }
+
+    const venue = await Venue.findById(venueId).populate({
       path: "ratings",
       select: "score comment user createdAt",
+      options: { sort: { createdAt: -1 } },
       populate: { path: "user", select: "name" },
     });
 
@@ -416,8 +422,8 @@ exports.checkVenueAvailability = async (req, res) => {
     const { venueId, court, date } = req.query;
 
     if (!venueId || !court || !date) {
-      return res.status(400).json({ 
-        error: "Venue ID, court, and date are required" 
+      return res.status(400).json({
+        error: "Venue ID, court, and date are required",
       });
     }
 
@@ -432,13 +438,13 @@ exports.checkVenueAvailability = async (req, res) => {
     }
 
     if (!venue.isActive) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Venue is currently inactive and not accepting bookings",
         venueId,
         court,
         date,
         bookedSlots: [],
-        available: false
+        available: false,
       });
     }
 
@@ -453,15 +459,15 @@ exports.checkVenueAvailability = async (req, res) => {
       court: court,
       date: {
         $gte: startOfDay,
-        $lte: endOfDay
+        $lte: endOfDay,
       },
-      status: { $in: ["confirmed", "pending"] } // Only consider active bookings
+      status: { $in: ["confirmed", "pending"] }, // Only consider active bookings
     }).select("timeSlot");
 
     // Return the booked time slots
-    const bookedSlots = existingBookings.map(booking => ({
+    const bookedSlots = existingBookings.map((booking) => ({
       start: booking.timeSlot.start,
-      end: booking.timeSlot.end
+      end: booking.timeSlot.end,
     }));
 
     res.status(200).json({
@@ -469,9 +475,8 @@ exports.checkVenueAvailability = async (req, res) => {
       court,
       date,
       bookedSlots,
-      available: true // Will be updated by frontend logic
+      available: true, // Will be updated by frontend logic
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -501,11 +506,13 @@ exports.toggleVenueAvailability = async (req, res) => {
     // Find venue owned by the current user
     const venue = await Venue.findOne({
       _id: venueId,
-      owner: req.user._id
+      owner: req.user._id,
     });
 
     if (!venue) {
-      return res.status(404).json({ error: "Venue not found or not authorized" });
+      return res
+        .status(404)
+        .json({ error: "Venue not found or not authorized" });
     }
 
     // Toggle the isActive status
@@ -513,8 +520,10 @@ exports.toggleVenueAvailability = async (req, res) => {
     await venue.save();
 
     res.status(200).json({
-      message: `Venue ${venue.isActive ? 'activated' : 'deactivated'} successfully`,
-      venue
+      message: `Venue ${
+        venue.isActive ? "activated" : "deactivated"
+      } successfully`,
+      venue,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

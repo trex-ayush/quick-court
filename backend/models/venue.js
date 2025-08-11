@@ -69,6 +69,18 @@ const venueSchema = new mongoose.Schema(
         ref: "Sport",
       },
     ],
+    // Persisted rating summary for fast listing and filtering
+    averageRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalRatings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     openingHours: {
       monday: {
         open: {
@@ -171,13 +183,6 @@ venueSchema.virtual("ratings", {
   ref: "Rating",
   localField: "_id",
   foreignField: "venue",
-});
-
-// Average rating virtual
-venueSchema.virtual("averageRating").get(function () {
-  if (!this.ratings || this.ratings.length === 0) return 0;
-  const total = this.ratings.reduce((acc, r) => acc + r.score, 0);
-  return Math.round((total / this.ratings.length) * 10) / 10; // one decimal
 });
 
 // Indexes

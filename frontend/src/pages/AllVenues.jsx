@@ -271,7 +271,7 @@ const AllVenues = () => {
   // Reset page when total pages changes
   useEffect(() => {
     if (page > totalPages && totalPages > 0) {
-      console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', totalPages);
+      // console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', totalPages);
       setPage(1);
     }
   }, [totalPages, page]);
