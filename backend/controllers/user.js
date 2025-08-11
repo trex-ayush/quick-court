@@ -2,12 +2,13 @@ const User = require("../models/user");
 const {
   generateOTP,
   sendOTPEmail,
+  generateRandomToken,
+  generateJWT,
   hashPassword,
+  comparePassword,
 } = require("../utils/helper");
 
 const crypto = require("crypto");
-
-// Store OTP temporarily in memory (You can replace this with Redis or a database for production)
 let otpStore = {};
 
 // Send OTP for registration
@@ -16,18 +17,32 @@ exports.sendRegistrationOTP = async (req, res) => {
     const { name, email, password, phone } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: "Name, email, and password are required" });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Name, email, and password are required",
+        });
     }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ success: false, message: "Email already registered" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already registered" });
     }
 
     const otp = generateOTP();
 
     // Store OTP in memory temporarily
-    otpStore[email] = { otp, name, email, password, phone, otpExpiry: Date.now() + 5 * 60 * 1000 };
+    otpStore[email] = {
+      otp,
+      name,
+      email,
+      password,
+      phone,
+      otpExpiry: Date.now() + 5 * 60 * 1000,
+    };
 
     await sendOTPEmail(email, otp);
 
@@ -45,7 +60,10 @@ exports.verifyRegistrationOTP = async (req, res) => {
 
     // Check if OTP exists for the given email
     const userData = otpStore[email];
-    if (!userData) return res.status(404).json({ success: false, message: "OTP not found or expired" });
+    if (!userData)
+      return res
+        .status(404)
+        .json({ success: false, message: "OTP not found or expired" });
 
     if (userData.otp !== otp) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
@@ -72,7 +90,13 @@ exports.verifyRegistrationOTP = async (req, res) => {
     // Clear OTP from memory after successful verification and user creation
     delete otpStore[email];
 
-    res.status(200).json({ success: true, message: "Account verified and created successfully", user: newUser });
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Account verified and created successfully",
+        user: newUser,
+      });
   } catch (error) {
     console.error("verifyRegistrationOTP Error:", error);
     res.status(500).json({ success: false, message: "Server error" });
@@ -85,12 +109,21 @@ exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ email }).select("+password");
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
-    if (user.isBanned) return res.status(403).json({ success: false, message: "Account banned" });
+    if (user.isBanned)
+      return res
+        .status(403)
+        .json({ success: false, message: "Account banned" });
 
     const isMatch = await comparePassword(password, user.password);
-    if (!isMatch) return res.status(400).json({ success: false, message: "Invalid credentials" });
+    if (!isMatch)
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid credentials" });
 
     const token = generateJWT(user._id);
 
@@ -111,10 +144,16 @@ exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
     const resetToken = generateRandomToken(20);
-    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
 
     user.resetToken = hashedToken;
     user.resetTokenExpiry = Date.now() + 10 * 60 * 1000; // 10 min
@@ -149,7 +188,10 @@ exports.getAllUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
   try {
     const user = await User.findById(req.params.userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
     res.status(200).json({ success: true, data: user });
   } catch (error) {
@@ -183,8 +225,13 @@ exports.createUser = async (req, res) => {
 // Update user
 exports.updateUser = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.params.userId, req.body, { new: true });
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    const user = await User.findByIdAndUpdate(req.params.userId, req.body, {
+      new: true,
+    });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
     res.status(200).json({ success: true, data: user });
   } catch (error) {
@@ -197,7 +244,10 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.userId);
-    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
 
     res.status(200).json({ success: true, message: "User deleted" });
   } catch (error) {

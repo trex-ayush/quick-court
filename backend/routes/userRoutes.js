@@ -20,6 +20,7 @@ router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.post("/forgot-password", forgotPassword);
 
+// for admin
 router.get("/", getAllUsers);
 router.get("/:userId", getUserById);
 router.post("/", createUser);
