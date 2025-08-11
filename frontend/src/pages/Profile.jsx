@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { base } from "../helper";
-import profileImage from "../assets/login.jpg"; // Replace with avatar image
+import profileImage from "../assets/login.jpg"; // Fallback avatar
 
 const mockBookings = [
   {
@@ -38,12 +38,12 @@ const mockBookings = [
 
 const Profile = () => {
   const [formData, setFormData] = useState({
-    fullName: "",
+    name: "",
     email: "",
+    phone: "",
+    profilePhoto: null,
     oldPassword: "",
     newPassword: "",
-    phone: "",
-    avatar: null,
   });
   const [activeTab, setActiveTab] = useState("bookings");
   const [showEdit, setShowEdit] = useState(false);
@@ -55,14 +55,14 @@ const Profile = () => {
       const u = JSON.parse(stored);
       setFormData((prev) => ({
         ...prev,
-        fullName: u.name || "",
+        name: u.name || "",
         email: u.email || "",
         phone: u.phone || "",
-        avatar: u.avatar || null,
+        profilePhoto: u.profilePhoto || u.avatar || null,
       }));
     }
 
-    // Then validate/fetch from backend if cookie exists
+    // Validate/fetch from backend if cookie exists
     const fetchMe = async () => {
       try {
         const res = await axios.get(`${base}/users/me`, { withCredentials: true });
@@ -70,14 +70,21 @@ const Profile = () => {
         if (u) {
           setFormData((prev) => ({
             ...prev,
-            fullName: u.name || "",
+            name: u.name || "",
             email: u.email || "",
             phone: u.phone || "",
-            avatar: u.avatar || null,
+            profilePhoto: u.profilePhoto || null,
           }));
           localStorage.setItem(
             "qc_user",
-            JSON.stringify({ id: u._id, name: u.name, email: u.email, phone: u.phone, role: u.role, avatar: u.avatar || null })
+            JSON.stringify({
+              id: u._id,
+              name: u.name,
+              email: u.email,
+              phone: u.phone,
+              role: u.role,
+              profilePhoto: u.profilePhoto || null,
+            })
           );
         }
       } catch (err) {
@@ -114,11 +121,11 @@ const Profile = () => {
         {/* Sidebar */}
         <div className="w-full md:w-1/3 p-6 border-b md:border-b-0 md:border-r border-gray-700 flex flex-col items-center">
           <img
-            src={formData.avatar || profileImage}
+            src={formData.profilePhoto || profileImage}
             alt="Profile"
             className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-purple-500"
           />
-          <h2 className="text-lg font-semibold">{formData.fullName || "User"}</h2>
+          <h2 className="text-lg font-semibold">{formData.name || "User"}</h2>
           <p className="text-gray-400">{formData.phone || ""}</p>
           <p className="text-gray-400 mb-4">{formData.email || ""}</p>
 
@@ -255,8 +262,8 @@ const Profile = () => {
                   <label className="block text-sm mb-1">Full Name</label>
                   <input
                     type="text"
-                    name="fullName"
-                    value={formData.fullName}
+                    name="name"
+                    value={formData.name}
                     onChange={handleChange}
                     className="w-full px-4 py-2 bg-transparent border border-gray-500 rounded-md text-white focus:outline-none focus:border-purple-500"
                   />
