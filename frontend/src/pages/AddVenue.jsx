@@ -313,6 +313,7 @@ const AddVenue = () => {
                   >
                     <option value="indoor">🏢 Indoor Venue</option>
                     <option value="outdoor">🌤️ Outdoor Venue</option>
+                    <option value="all">🌐 All Venue</option>
                   </select>
                 </div>
               </div>

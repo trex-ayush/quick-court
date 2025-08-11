@@ -30,7 +30,7 @@ const getMinPrice = (venue) => {
   return Math.min(...prices);
 };
 
-const MIN_PRICE = 100;
+const MIN_PRICE = 20;
 const MAX_PRICE = 5000;
 const PRICE_STEP = 50;
 
@@ -150,23 +150,22 @@ const AllVenues = () => {
   const [venueType, setVenueType] = useState("all"); // all | indoor | outdoor
   const [minRating, setMinRating] = useState(0);
 
-  const fetchVenues = async (pageNum = 1) => {
+  const fetchVenues = async () => {
     try {
       setLoading(true);
       setError("");
+      // Fetch all venues at once for client-side pagination
       const { data } = await axios.get(`${base}/venues/`, {
-        params: { page: pageNum, limit: 6, status: "approved" }, // Added status filter to only show approved venues
+        params: { status: "approved" }, // Remove pagination params to get all venues
       });
       const list = Array.isArray(data?.data)
         ? data.data
         : Array.isArray(data)
         ? data
         : [];
-      console.log('Fetched venues:', list.length, 'Total pages:', data?.pagination?.pages, 'Current page:', pageNum); // Debug log
-      console.log('Venue names:', list.map(v => ({ name: v?.name, status: v?.status, venueType: v?.venueType }))); // Debug log for venue details
       setVenues(list);
-      const totalPages = Number(data?.pagination?.pages || 1);
-      setPages(totalPages);
+      // Calculate total pages based on filtered results (will be updated in useEffect)
+      // Removed setPages(1) - let useEffect handle it
     } catch (err) {
       setError("Failed to load venues. Please try again.");
       setVenues([]);
@@ -177,7 +176,7 @@ const AllVenues = () => {
   };
 
   useEffect(() => {
-    fetchVenues(1);
+    fetchVenues();
   }, []);
 
   const allSports = useMemo(() => {
@@ -189,7 +188,6 @@ const AllVenues = () => {
   }, [venues]);
 
   const filtered = useMemo(() => {
-    console.log('Filtering venues:', venues.length, 'venues'); // Debug log
     const filteredVenues = venues.filter((v) => {
       const nameOk = v?.name?.toLowerCase().includes(query.toLowerCase());
       const sportOk =
@@ -206,33 +204,50 @@ const AllVenues = () => {
         (venueType === "indoor" && v?.venueType === "indoor") ||
         (venueType === "outdoor" && v?.venueType === "outdoor");
       
-      // Debug log for filtered out venues
-      if (!nameOk || !sportOk || !ratingOk || !priceOk || !typeOk) {
-        console.log('Venue filtered out:', v?.name, {
-          nameOk, sportOk, ratingOk, priceOk, typeOk,
-          query, sport, minRating, minPrice, maxPrice, venueType,
-          venueTypeValue: v?.venueType
-        });
-      }
-      
       return nameOk && sportOk && ratingOk && priceOk && typeOk;
     });
-    console.log('Filtered venues:', filteredVenues.length, 'out of', venues.length); // Debug log
     return filteredVenues;
   }, [venues, query, sport, minRating, minPrice, maxPrice, venueType]);
 
+  // Client-side pagination
+  const ITEMS_PER_PAGE = 6;
+  const paginatedVenues = useMemo(() => {
+    const startIndex = (page - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const paginated = filtered.slice(startIndex, endIndex);
+    console.log('Pagination Debug - Page:', page, 'Start:', startIndex, 'End:', endIndex, 'Paginated count:', paginated.length);
+    return paginated;
+  }, [filtered, page]);
+
+  // Update total pages when filtered results change
+  useEffect(() => {
+    const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+    console.log('Pagination Debug - Filtered length:', filtered.length, 'ITEMS_PER_PAGE:', ITEMS_PER_PAGE, 'Total pages:', totalPages);
+    setPages(totalPages);
+  }, [filtered.length]); // Only depend on filtered.length
+
+  // Reset page when total pages changes
+  useEffect(() => {
+    if (page > pages && pages > 0) {
+      console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', pages);
+      setPage(1);
+    }
+  }, [pages, page]);
+
   const nextPage = () => {
+    console.log('Next Page Debug - Current page:', page, 'Total pages:', pages, 'Can go next:', page < pages);
     if (page < pages) {
       const p = page + 1;
       setPage(p);
-      fetchVenues(p);
+      // No need to refetch, filtered will update based on current venues
     }
   };
   const prevPage = () => {
+    console.log('Prev Page Debug - Current page:', page, 'Can go prev:', page > 1);
     if (page > 1) {
       const p = page - 1;
       setPage(p);
-      fetchVenues(p);
+      // No need to refetch, filtered will update based on current venues
     }
   };
 
@@ -263,6 +278,11 @@ const AllVenues = () => {
             <span className="flex items-center gap-1">
               📍 <span>{filtered.length} venues found</span>
             </span>
+            {pages > 1 && (
+              <span className="text-xs text-slate-400">
+                (Page {page} of {pages})
+              </span>
+            )}
           </div>
         </div>
 
@@ -432,7 +452,7 @@ const AllVenues = () => {
             {!loading && !error && (
               <>
                 <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-                  {filtered.map((venue) => {
+                  {paginatedVenues.map((venue) => {
                     const key = venue.id || venue._id;
                     const rating = Number(venue?.averageRating || 0).toFixed(1);
                     const imageSrc = getVenuePrimaryImage(venue);

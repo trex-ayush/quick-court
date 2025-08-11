@@ -1,4 +1,5 @@
 const Venue = require("../models/venue");
+const Booking = require("../models/booking");
 const mongoose = require("mongoose");
 
 // GET ALL VENUES
@@ -308,6 +309,74 @@ exports.getVenueWithRatings = async (req, res) => {
     }
 
     res.json(venue);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Check venue availability for a specific date and court
+exports.checkVenueAvailability = async (req, res) => {
+  try {
+    const { venueId, court, date } = req.query;
+
+    if (!venueId || !court || !date) {
+      return res.status(400).json({ 
+        error: "Venue ID, court, and date are required" 
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      return res.status(400).json({ error: "Invalid venue ID" });
+    }
+
+    // Check if venue exists
+    const venue = await Venue.findById(venueId);
+    if (!venue) {
+      return res.status(404).json({ error: "Venue not found" });
+    }
+
+    // Parse the date to start and end of day
+    const selectedDate = new Date(date);
+    const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
+
+    // Find existing bookings for this venue, court, and date
+    const existingBookings = await Booking.find({
+      venue: venueId,
+      court: court,
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: { $in: ["confirmed", "pending"] } // Only consider active bookings
+    }).select("timeSlot");
+
+    // Return the booked time slots
+    const bookedSlots = existingBookings.map(booking => ({
+      start: booking.timeSlot.start,
+      end: booking.timeSlot.end
+    }));
+
+    res.status(200).json({
+      venueId,
+      court,
+      date,
+      bookedSlots,
+      available: true // Will be updated by frontend logic
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET MY VENUES (OWNER)
+exports.getMyVenues = async (req, res) => {
+  try {
+    const venues = await Venue.find({ owner: req.user._id })
+      .populate("sports", "name")
+      .sort({ createdAt: -1 });
+    res.status(200).json({ data: venues });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

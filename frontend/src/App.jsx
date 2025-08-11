@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AddVenue from "./pages/AddVenue";
 import OwnerAdminRoute from "./components/OwnerAdminRoute";
 import VenueDetails from "./pages/VenueDetails";
+import OwnerDashboard from "./pages/OwnerDashboard";
 
 const App = () => {
   return (
@@ -55,6 +56,7 @@ const App = () => {
                 </ProtectedRoute>
               }
             />
+            <Route path="/owner/dashboard" element={<OwnerAdminRoute><OwnerDashboard /></OwnerAdminRoute>} />
           </Routes>
         </Router>
       </div>

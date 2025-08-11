@@ -10,6 +10,8 @@ const {
   rejectVenue,
   toggleBanVenue,
   getVenueWithRatings,
+  checkVenueAvailability,
+  getMyVenues,
 } = require("../controllers/venue");
 const {
   protectedOwner,
@@ -21,6 +23,8 @@ const router = express.Router();
 
 router.get("/", getAllVenues);
 router.get("/search", searchVenues);
+router.get("/availability", checkVenueAvailability);
+router.get("/my", protectedOwner, getMyVenues);
 router.get("/:venueId", getVenueById);
 // Allow owners or admins to create (protectedOwner already allows admin)
 router.post(

@@ -156,7 +156,7 @@ const venueSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: false },
     venueType: {
       type: String,
-      enum: ["indoor", "outdoor"],
+      enum: ["indoor", "outdoor", "all"],
     },
   },
   {

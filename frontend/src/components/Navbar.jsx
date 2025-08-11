@@ -37,6 +37,7 @@ const Navbar = () => {
   );
 
   const canCreate = user && (user.role === "owner" || user.role === "admin");
+  const isOwner = user && user.role === "owner";
 
   return (
     <nav className="w-full backdrop-blur supports-[backdrop-filter]:bg-black/40 bg-black/30 border-b border-white/10 sticky top-0 z-20">
@@ -53,6 +54,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-2">
             <NavLink to="/venues">Venues</NavLink>
             {canCreate && <NavLink to="/venues/new">Add Venue</NavLink>}
+            {isOwner && <NavLink to="/owner/dashboard">Owner Dashboard</NavLink>}
             <NavLink to="/Profile">Profile</NavLink>
             {user ? (
               <button
@@ -91,6 +93,7 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <NavLink to="/">Venues</NavLink>
             {canCreate && <NavLink to="/venues/new">Add Venue</NavLink>}
+            {isOwner && <NavLink to="/owner/dashboard">Owner Dashboard</NavLink>}
             <NavLink to="/Profile">Profile</NavLink>
             {user ? (
               <button
