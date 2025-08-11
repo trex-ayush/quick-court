@@ -4,8 +4,9 @@ import Signup from "./pages/SignUp";
 import Login from "./pages/Login";
 import OtpVerification from "./pages/OtpVerification";
 import Home from "./pages/Home";
-import VenueBooking from "./pages/VenueBooking";
-import VenueDetails from "./pages/VenueDetails";
+import Profile from "./pages/Profile";
+// import VenueBooking from "./pages/VenueBooking";
+// import VenueDetails from "./pages/VenueDetails";
 
 const App = () => {
   return (
@@ -30,9 +31,10 @@ const App = () => {
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/otp" element={<OtpVerification />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/VenueBooking" element={<VenueBooking/>} />
-            <Route path="/venue-details" element={<VenueDetails/>} />
+            <Route path="/" element={<Home/>} />
+            <Route path="/Profile" element={<Profile/>} />
+            {/* <Route path="/VenueBooking" element={<VenueBooking/>} />
+            <Route path="/venue-details" element={<VenueDetails/>} /> */}
           </Routes>
         </Router>
       </div>

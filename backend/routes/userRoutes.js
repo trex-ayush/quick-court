@@ -12,6 +12,7 @@ const {
   sendRegistrationOTP,
   verifyRegistrationOTP,
   updateMyProfile,
+  getMe,
 } = require("../controllers/user");
 const { protectedUser } = require("../middleware/auth");
 const router = express.Router();
@@ -21,6 +22,7 @@ router.post("/verify-otp", verifyRegistrationOTP);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
 router.post("/forgot-password", forgotPassword);
+router.get("/me", protectedUser, getMe);
 router.put("/me/update", protectedUser, updateMyProfile);
 
 // for admin
