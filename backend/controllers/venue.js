@@ -11,6 +11,12 @@ exports.getAllVenues = async (req, res) => {
 
     const filter = {};
     if (status) filter.status = status;
+    
+    // For regular users, only show active venues
+    // For owners and admins, show all venues
+    if (!req.user || (req.user.role !== 'owner' && req.user.role !== 'admin')) {
+      filter.isActive = true;
+    }
 
     const venues = await Venue.find(filter)
       .populate("owner", "name email")
@@ -177,19 +183,100 @@ exports.updateVenue = async (req, res) => {
       return res.status(400).json({ error: "Invalid venue ID" });
     }
 
-    const updates = { ...req.body };
+    // Normalize body from multipart/form-data
+    const body = { ...req.body };
 
-    // Append new uploaded photos if present
+    // Parse courts when sent as JSON string
+    if (typeof body.courts === "string") {
+      try {
+        body.courts = JSON.parse(body.courts);
+      } catch (e) {
+        return res.status(400).json({ error: "Invalid courts payload" });
+      }
+    }
+
+    // Convert perHourPrice to Number for courts
+    if (Array.isArray(body.courts)) {
+      body.courts = body.courts.map((c) => ({
+        name: c?.name,
+        perHourPrice: Number(c?.perHourPrice) || 0,
+      }));
+    }
+
+    // Reconstruct openingHours from bracketed keys
+    const days = [
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+      "sunday",
+    ];
+    const openingHours = {};
+    if (body["openingHours[_24hours]"] !== undefined) {
+      openingHours._24hours = String(body["openingHours[_24hours]"]) === "true";
+      delete body["openingHours[_24hours]"];
+    }
+    days.forEach((d) => {
+      const openKey = `openingHours[${d}][open]`;
+      const closeKey = `openingHours[${d}][close]`;
+      const open = body[openKey];
+      const close = body[closeKey];
+      if (open || close) {
+        openingHours[d] = {};
+        if (open) openingHours[d].open = open;
+        if (close) openingHours[d].close = close;
+      }
+      if (openKey in body) delete body[openKey];
+      if (closeKey in body) delete body[closeKey];
+    });
+    if (Object.keys(openingHours).length > 0) {
+      body.openingHours = openingHours;
+    }
+
+    // Parse amenities if sent as string
+    if (typeof body.amenities === "string") {
+      try {
+        body.amenities = JSON.parse(body.amenities);
+      } catch (e) {
+        body.amenities = body.amenities.split(',').map(a => a.trim());
+      }
+    }
+
+    // Parse sports if sent as string
+    if (typeof body.sports === "string") {
+      try {
+        body.sports = JSON.parse(body.sports);
+      } catch (e) {
+        body.sports = body.sports.split(',').map(s => s.trim());
+      }
+    }
+
+    const updates = { ...body };
+
+    // Handle photo updates
     if (req.files?.length) {
       const photoUrls = req.files.map((file) => file.path);
-      updates.$push = { photos: { $each: photoUrls } };
+      // If replacing all photos, use $set, otherwise append
+      if (body.replacePhotos === 'true') {
+        updates.photos = photoUrls;
+      } else {
+        updates.$push = { photos: { $each: photoUrls } };
+      }
     }
+
+    // Remove fields that shouldn't be updated
+    delete updates.owner;
+    delete updates.status;
+    delete updates.isVerified;
+    delete updates.replacePhotos;
 
     const venue = await Venue.findOneAndUpdate(
       { _id: venueId, owner: req.user._id },
       updates,
-      { new: true }
-    );
+      { new: true, runValidators: true }
+    ).populate("sports", "name");
 
     if (!venue) {
       return res
@@ -329,10 +416,21 @@ exports.checkVenueAvailability = async (req, res) => {
       return res.status(400).json({ error: "Invalid venue ID" });
     }
 
-    // Check if venue exists
+    // Check if venue exists and is active
     const venue = await Venue.findById(venueId);
     if (!venue) {
       return res.status(404).json({ error: "Venue not found" });
+    }
+
+    if (!venue.isActive) {
+      return res.status(400).json({ 
+        error: "Venue is currently inactive and not accepting bookings",
+        venueId,
+        court,
+        date,
+        bookedSlots: [],
+        available: false
+      });
     }
 
     // Parse the date to start and end of day
@@ -377,6 +475,38 @@ exports.getMyVenues = async (req, res) => {
       .populate("sports", "name")
       .sort({ createdAt: -1 });
     res.status(200).json({ data: venues });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Toggle venue availability (owner only)
+exports.toggleVenueAvailability = async (req, res) => {
+  try {
+    const { venueId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(venueId)) {
+      return res.status(400).json({ error: "Invalid venue ID" });
+    }
+
+    // Find venue owned by the current user
+    const venue = await Venue.findOne({
+      _id: venueId,
+      owner: req.user._id
+    });
+
+    if (!venue) {
+      return res.status(404).json({ error: "Venue not found or not authorized" });
+    }
+
+    // Toggle the isActive status
+    venue.isActive = !venue.isActive;
+    await venue.save();
+
+    res.status(200).json({
+      message: `Venue ${venue.isActive ? 'activated' : 'deactivated'} successfully`,
+      venue
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

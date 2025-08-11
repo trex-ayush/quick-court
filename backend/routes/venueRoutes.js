@@ -12,6 +12,7 @@ const {
   getVenueWithRatings,
   checkVenueAvailability,
   getMyVenues,
+  toggleVenueAvailability,
 } = require("../controllers/venue");
 const {
   protectedOwner,
@@ -36,6 +37,7 @@ router.post(
 // Allow owners or admins to update/delete their venue; admins pass protectedOwner too
 router.put("/:venueId", protectedOwner, updateVenue);
 router.delete("/:venueId", protectedOwner, deleteVenue);
+router.post("/:venueId/toggle-availability", protectedOwner, toggleVenueAvailability);
 router.get("/:id", getVenueWithRatings);
 
 router.post("/:venueId/approve", protectedAdmin, approveVenue);

@@ -74,6 +74,17 @@ const bookingSchema = new mongoose.Schema(
       enum: ["confirmed", "cancelled", "completed", "no-show"],
       default: "confirmed",
     },
+    cancellationReason: {
+      type: String,
+      maxlength: 500,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancelledAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

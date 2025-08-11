@@ -1,67 +1,67 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Signup from "./pages/SignUp";
-import Login from "./pages/Login";
-import OtpVerification from "./pages/OtpVerification";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
+import OtpVerification from "./pages/OtpVerification";
 import Profile from "./pages/Profile";
-import AllVenues from "./pages/AllVenues";
-import Navbar from "./components/Navbar";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AddVenue from "./pages/AddVenue";
-import OwnerAdminRoute from "./components/OwnerAdminRoute";
 import VenueDetails from "./pages/VenueDetails";
+import AddVenue from "./pages/AddVenue";
+import AllVenues from "./pages/AllVenues";
 import OwnerDashboard from "./pages/OwnerDashboard";
+import UpdateVenue from "./pages/UpdateVenue";
+import ProtectedRoute from "./components/ProtectedRoute";
+import OwnerAdminRoute from "./components/OwnerAdminRoute";
+import Navbar from "./components/Navbar";
 
-const App = () => {
+function App() {
   return (
-    <div className="min-h-screen w-full bg-[#0a0a0a] relative">
-      {/* Cosmic Aurora */}
-      <div
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: `
-            radial-gradient(ellipse at 20% 30%, rgba(56, 189, 248, 0.4) 0%, transparent 60%),
-            radial-gradient(ellipse at 80% 70%, rgba(139, 92, 246, 0.3) 0%, transparent 70%),
-            radial-gradient(ellipse at 60% 20%, rgba(236, 72, 153, 0.25) 0%, transparent 50%),
-            radial-gradient(ellipse at 40% 80%, rgba(34, 197, 94, 0.2) 0%, transparent 65%)
-          `,
-        }}
-      />
-
-      {/* Page Content */}
-      <div className="relative z-10">
-        <Router>
-          <Navbar />
-          <Routes>
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/otp" element={<OtpVerification />} />
-            <Route path="/" element={<Home />} />
-            <Route path="/venues" element={<AllVenues />} />
-            <Route path="/venues/:id" element={<VenueDetails />} />
-            <Route
-              path="/venues/new"
-              element={
-                <OwnerAdminRoute>
-                  <AddVenue />
-                </OwnerAdminRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/owner/dashboard" element={<OwnerAdminRoute><OwnerDashboard /></OwnerAdminRoute>} />
-          </Routes>
-        </Router>
+    <BrowserRouter>
+      <div className="App">
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<SignUp />} />
+          <Route path="/otp-verification" element={<OtpVerification />} />
+          <Route path="/venues" element={<AllVenues />} />
+          <Route path="/venues/:id" element={<VenueDetails />} />
+          <Route
+            path="/venues/new"
+            element={
+              <OwnerAdminRoute>
+                <AddVenue />
+              </OwnerAdminRoute>
+            }
+          />
+          <Route
+            path="/venues/:venueId/edit"
+            element={
+              <OwnerAdminRoute>
+                <UpdateVenue />
+              </OwnerAdminRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/owner/dashboard"
+            element={
+              <OwnerAdminRoute>
+                <OwnerDashboard />
+              </OwnerAdminRoute>
+            }
+          />
+        </Routes>
       </div>
-    </div>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;

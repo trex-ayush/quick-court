@@ -495,6 +495,16 @@ const VenueDetails = () => {
           >
             Book This Venue
           </button>
+          
+          {/* Edit button for venue owners */}
+          {user && (user.role === 'owner' || user.role === 'admin') && venue.owner === user._id && (
+            <button
+              onClick={() => navigate(`/venues/${venue._id || venue.id}/edit`)}
+              className="mt-3 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            >
+              Edit Venue
+            </button>
+          )}
         </div>
 
         {/* Image gallery */}

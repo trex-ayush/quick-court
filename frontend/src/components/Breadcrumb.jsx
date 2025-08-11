@@ -27,18 +27,44 @@ const Breadcrumb = () => {
     }
   }, [params.id, pathnames]);
 
-  const getBreadcrumbName = (path) => {
-    const breadcrumbMap = {
-      signup: "Sign Up",
-      login: "Login",
-      otp: "OTP Verification",
-      venues: "Venues",
-      new: "Add New Venue",
-      profile: "Profile",
-      venue: "Venue Details",
-    };
+  const breadcrumbNames = {
+    home: "Home",
+    login: "Login",
+    signup: "Sign Up",
+    otp: "OTP Verification",
+    profile: "Profile",
+    venues: "Venues",
+    new: "Add New Venue",
+    edit: "Edit Venue",
+    owner: "Owner",
+    dashboard: "Dashboard",
+  };
 
-    return breadcrumbMap[path] || path.charAt(0).toUpperCase() + path.slice(1);
+  const breadcrumbIcons = {
+    home: "🏠",
+    login: "🔐",
+    signup: "📝",
+    otp: "📱",
+    profile: "👤",
+    venues: "🏟️",
+    new: "➕",
+    edit: "✏️",
+    owner: "👑",
+    dashboard: "📊",
+  };
+
+  const getBreadcrumbName = (path) => {
+    if (path === "new") return "Add New Venue";
+    if (path === "edit") return "Edit Venue";
+    if (path === "owner") return "Owner";
+    if (path === "dashboard") return "Dashboard";
+    
+    // For venue details, try to get the venue name
+    if (path === params.id && venueName) {
+      return venueName;
+    }
+    
+    return breadcrumbNames[path] || path.charAt(0).toUpperCase() + path.slice(1);
   };
 
   const getBreadcrumbIcon = (path) => {
@@ -50,6 +76,8 @@ const Breadcrumb = () => {
       new: "➕",
       profile: "👤",
       venue: "🏸",
+      owner: "👑",
+      dashboard: "📊",
     };
 
     return iconMap[path] || "📄";

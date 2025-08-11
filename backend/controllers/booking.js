@@ -2,6 +2,7 @@
 const Booking = require("../models/booking");
 const Venue = require("../models/venue");
 const Sport = require("../models/sport");
+const mongoose = require("mongoose");
 
 // Create booking
 exports.createBooking = async (req, res) => {
@@ -92,6 +93,85 @@ exports.cancelBooking = async (req, res) => {
     await booking.save();
 
     res.status(200).json({ message: "Booking cancelled", booking });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get bookings for owner's venues
+exports.getOwnerBookings = async (req, res) => {
+  try {
+    // First get all venues owned by the current user
+    const Venue = require("../models/venue");
+    const ownedVenues = await Venue.find({ owner: req.user._id }).select("_id");
+    const venueIds = ownedVenues.map(venue => venue._id);
+
+    if (venueIds.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    // Get all bookings for these venues
+    const bookings = await Booking.find({ 
+      venue: { $in: venueIds } 
+    })
+    .populate("user", "name email")
+    .populate("venue", "name address")
+    .populate("sport", "name")
+    .sort({ date: -1 });
+
+    res.status(200).json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Owner cancel booking for their venue
+exports.ownerCancelBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { reason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ error: "Invalid booking ID" });
+    }
+
+    // First check if the booking exists and belongs to a venue owned by the current user
+    const booking = await Booking.findById(bookingId).populate('venue');
+    
+    if (!booking) {
+      return res.status(404).json({ error: "Booking not found" });
+    }
+
+    // Check if the venue belongs to the current owner
+    const Venue = require("../models/venue");
+    const venue = await Venue.findOne({ 
+      _id: booking.venue._id, 
+      owner: req.user._id 
+    });
+
+    if (!venue) {
+      return res.status(403).json({ error: "You can only cancel bookings for your own venues" });
+    }
+
+    // Check if booking is in the future
+    const bookingDate = new Date(booking.date);
+    const now = new Date();
+    if (bookingDate < now) {
+      return res.status(400).json({ error: "Cannot cancel past bookings" });
+    }
+
+    // Update booking status
+    booking.status = "cancelled";
+    booking.cancellationReason = reason || "Cancelled by venue owner";
+    booking.cancelledBy = req.user._id;
+    booking.cancelledAt = new Date();
+
+    await booking.save();
+
+    res.status(200).json({ 
+      message: "Booking cancelled successfully", 
+      booking 
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
