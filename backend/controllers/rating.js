@@ -1,7 +1,7 @@
 const Rating = require("../models/rating");
 
 // controllers/rating.js
-const Venue = require("../models/Venue");
+const Venue = require("../models/venue");
 
 async function updateVenueAverage(venueId) {
   const result = await Rating.aggregate([
