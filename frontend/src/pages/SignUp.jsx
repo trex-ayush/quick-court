@@ -437,7 +437,7 @@ export default function Signup() {
                 <input
                   type="radio"
                   name="role"
-                  value="facility_owner"
+                  value="=owner"
                   checked={form.role === "owner"}
                   onChange={handleChange}
                   className="text-purple-600"
