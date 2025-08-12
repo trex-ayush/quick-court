@@ -73,8 +73,8 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
 
   useEffect(() => {
     const handleGlobalMouseUp = () => setIsDragging(null);
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    document.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => document.removeEventListener("mouseup", handleGlobalMouseUp);
   }, []);
 
   return (
@@ -96,11 +96,11 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
         {/* Active range track */}
         <div
           className="absolute top-1/2 transform -translate-y-1/2 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm"
-          style={{ 
-            left: `${leftPercent}%`, 
+          style={{
+            left: `${leftPercent}%`,
             width: `${rightPercent - leftPercent}%`,
-            marginLeft: '12px',
-            marginRight: '12px'
+            marginLeft: "12px",
+            marginRight: "12px",
           }}
         />
 
@@ -112,14 +112,14 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           step={PRICE_STEP}
           value={localMin}
           onChange={handleMinChange}
-          onMouseDown={() => handleMouseDown('min')}
+          onMouseDown={() => handleMouseDown("min")}
           onMouseUp={handleMouseUp}
           className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
-            isDragging === 'min' ? 'z-30' : 'z-20'
+            isDragging === "min" ? "z-30" : "z-20"
           }`}
-          style={{ 
-            background: 'transparent',
-            outline: 'none'
+          style={{
+            background: "transparent",
+            outline: "none",
           }}
         />
 
@@ -131,14 +131,14 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           step={PRICE_STEP}
           value={localMax}
           onChange={handleMaxChange}
-          onMouseDown={() => handleMouseDown('max')}
+          onMouseDown={() => handleMouseDown("max")}
           onMouseUp={handleMouseUp}
           className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
-            isDragging === 'max' ? 'z-30' : 'z-20'
+            isDragging === "max" ? "z-30" : "z-20"
           }`}
-          style={{ 
-            background: 'transparent',
-            outline: 'none'
+          style={{
+            background: "transparent",
+            outline: "none",
           }}
         />
       </div>
@@ -152,22 +152,24 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           border: 3px solid #3b82f6;
           border-radius: 50%;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3), 0 2px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3),
+            0 2px 6px rgba(0, 0, 0, 0.1);
           transition: all 0.2s ease;
           position: relative;
         }
-        
+
         .slider-thumb::-webkit-slider-thumb:hover {
           transform: scale(1.15);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4),
+            0 4px 12px rgba(0, 0, 0, 0.15);
           border-color: #2563eb;
         }
-        
+
         .slider-thumb::-webkit-slider-thumb:active {
           transform: scale(1.1);
           box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
         }
-        
+
         .slider-thumb::-moz-range-thumb {
           width: 24px;
           height: 24px;
@@ -178,17 +180,17 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           transition: all 0.2s ease;
         }
-        
+
         .slider-thumb::-moz-range-thumb:hover {
           transform: scale(1.15);
           box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
-        
+
         .slider-thumb::-moz-range-track {
           background: transparent;
           border: none;
         }
-        
+
         .slider-thumb::-webkit-slider-runnable-track {
           background: transparent;
           border: none;
@@ -206,10 +208,13 @@ const AllVenues = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState({ city: "", venueName: "" });
   const [searchLoading, setSearchLoading] = useState(false);
-  
+
   // Filter states
   const [venueType, setVenueType] = useState("all");
-  const [priceRange, setPriceRange] = useState({ min: MIN_PRICE, max: MAX_PRICE });
+  const [priceRange, setPriceRange] = useState({
+    min: MIN_PRICE,
+    max: MAX_PRICE,
+  });
   const [selectedSports, setSelectedSports] = useState([]);
   const navigate = useNavigate();
 
@@ -226,7 +231,11 @@ const AllVenues = () => {
       setError("");
       // Fetch all venues at once for client-side pagination
       const { data } = await axios.get(`${base}/venues/`, {
-        params: { status: "approved" }, // Remove pagination params to get all venues
+        params: {
+          status: "approved",
+          isActive: true,
+          "banInfo.isBanned": false,
+        },
       });
       const list = Array.isArray(data?.data)
         ? data.data
@@ -249,20 +258,20 @@ const AllVenues = () => {
     try {
       setSearchLoading(true);
       setError("");
-      
+
       // If no search query, fetch all venues
       if (!searchQuery.city && !searchQuery.venueName) {
         await fetchVenues();
         return;
       }
-      
+
       // Build search params
       const params = {};
       if (searchQuery.city) params.city = searchQuery.city;
       if (searchQuery.venueName) params.venueName = searchQuery.venueName;
-      
+
       const { data } = await axios.get(`${base}/venues/search`, { params });
-      
+
       if (data.venues) {
         setVenues(data.venues);
         setTotalPages(data.totalPages || 1);
@@ -271,7 +280,6 @@ const AllVenues = () => {
         setVenues([]);
         setTotalPages(1);
       }
-      
     } catch (err) {
       setError("Search failed. Please try again.");
       setVenues([]);
@@ -303,13 +311,13 @@ const AllVenues = () => {
       const price = getMinPrice(v);
       const priceOk =
         price === undefined || (price >= minPrice && price <= maxPrice);
-      
+
       // Fixed venue type filtering to use venue.venueType instead of court.isOutdoor
       const typeOk =
         venueType === "all" ||
         (venueType === "indoor" && v?.venueType === "indoor") ||
         (venueType === "outdoor" && v?.venueType === "outdoor");
-      
+
       return nameOk && sportOk && ratingOk && priceOk && typeOk;
     });
     return filteredVenues;
@@ -349,7 +357,12 @@ const AllVenues = () => {
     }
   };
   const prevPage = () => {
-    console.log('Prev Page Debug - Current page:', page, 'Can go prev:', page > 1);
+    console.log(
+      "Prev Page Debug - Current page:",
+      page,
+      "Can go prev:",
+      page > 1
+    );
     if (page > 1) {
       const p = page - 1;
       setPage(p);
@@ -372,7 +385,7 @@ const AllVenues = () => {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         {/* Breadcrumb Navigation */}
         <Breadcrumb />
-        
+
         {/* Enhanced Title */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
@@ -381,7 +394,7 @@ const AllVenues = () => {
           <p className="text-slate-600 text-sm sm:text-base">
             Discover and Book Nearby Venues for Your Favorite Sports
           </p>
-          
+
           {/* Search Summary */}
           {(searchQuery.city || searchQuery.venueName) && (
             <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-lg">
@@ -389,12 +402,16 @@ const AllVenues = () => {
                 🔍 Search Results for:
               </div>
               <div className="text-xs text-blue-700 mt-1">
-                {searchQuery.city && <span className="mr-3">📍 City: {searchQuery.city}</span>}
-                {searchQuery.venueName && <span>🏟️ Venue: {searchQuery.venueName}</span>}
+                {searchQuery.city && (
+                  <span className="mr-3">📍 City: {searchQuery.city}</span>
+                )}
+                {searchQuery.venueName && (
+                  <span>🏟️ Venue: {searchQuery.venueName}</span>
+                )}
               </div>
             </div>
           )}
-          
+
           <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
             <span className="flex items-center gap-1">
               📍 <span>{filtered.length} venues found</span>
@@ -420,7 +437,7 @@ const AllVenues = () => {
                 <div className="text-sm font-semibold text-blue-800">
                   🔎 Search Venues
                 </div>
-                
+
                 {/* City Search */}
                 <div>
                   <label className="block text-xs font-medium mb-2 text-blue-700">
@@ -431,11 +448,16 @@ const AllVenues = () => {
                     placeholder="Enter city name..."
                     className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                     value={searchQuery.city}
-                    onChange={(e) => setSearchQuery(prev => ({ ...prev, city: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
+                    onChange={(e) =>
+                      setSearchQuery((prev) => ({
+                        ...prev,
+                        city: e.target.value,
+                      }))
+                    }
+                    onKeyPress={(e) => e.key === "Enter" && searchVenues()}
                   />
                 </div>
-                
+
                 {/* Search Button */}
                 <button
                   onClick={searchVenues}
@@ -448,12 +470,10 @@ const AllVenues = () => {
                       Searching...
                     </>
                   ) : (
-                    <>
-                      🔍 Search 
-                    </>
+                    <>🔍 Search</>
                   )}
                 </button>
-                
+
                 {/* Clear Search */}
                 {(searchQuery.city || searchQuery.venueName) && (
                   <button
@@ -629,13 +649,14 @@ const AllVenues = () => {
                   <div className="text-center py-12">
                     <div className="text-6xl mb-4">🏟️</div>
                     <h3 className="text-xl font-semibold text-slate-700 mb-2">
-                      {searchQuery.city || searchQuery.venueName ? "No venues found" : "No venues available"}
+                      {searchQuery.city || searchQuery.venueName
+                        ? "No venues found"
+                        : "No venues available"}
                     </h3>
                     <p className="text-slate-500 mb-6">
-                      {searchQuery.city || searchQuery.venueName 
+                      {searchQuery.city || searchQuery.venueName
                         ? `No venues match your search criteria. Try adjusting your search terms.`
-                        : "There are currently no venues available. Please check back later."
-                      }
+                        : "There are currently no venues available. Please check back later."}
                     </p>
                     {(searchQuery.city || searchQuery.venueName) && (
                       <button
@@ -655,7 +676,9 @@ const AllVenues = () => {
                     <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
                       {paginatedVenues.map((venue) => {
                         const key = venue.id || venue._id;
-                        const rating = Number(venue?.averageRating || 0).toFixed(1);
+                        const rating = Number(
+                          venue?.averageRating || 0
+                        ).toFixed(1);
                         const imageSrc = getVenuePrimaryImage(venue);
                         const sportLabel =
                           venue?.sports?.[0]?.name ||
@@ -677,13 +700,13 @@ const AllVenues = () => {
                                 className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                              
+
                               {/* Rating Badge */}
                               <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium">
                                 <span className="text-yellow-400">⭐</span>
                                 <span>{rating}</span>
                               </div>
-                              
+
                               {/* Sport Badge */}
                               <div className="absolute right-4 top-4">
                                 <span className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-slate-700">
@@ -710,17 +733,22 @@ const AllVenues = () => {
                                   <span>📍</span>
                                   {venue?.address}
                                 </p>
-                                
+
                                 {/* Venue Type */}
                                 {venue?.venueType && (
                                   <div className="mb-3">
-                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                                      venue.venueType === 'indoor' 
-                                        ? 'bg-blue-100 text-blue-800' 
-                                        : 'bg-green-100 text-green-800'
-                                    }`}>
-                                      {venue.venueType === 'indoor' ? '🏢' : '🌤️'}
-                                      {venue.venueType.charAt(0).toUpperCase() + venue.venueType.slice(1)}
+                                    <span
+                                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                                        venue.venueType === "indoor"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-green-100 text-green-800"
+                                      }`}
+                                    >
+                                      {venue.venueType === "indoor"
+                                        ? "🏢"
+                                        : "🌤️"}
+                                      {venue.venueType.charAt(0).toUpperCase() +
+                                        venue.venueType.slice(1)}
                                     </span>
                                   </div>
                                 )}
@@ -729,16 +757,20 @@ const AllVenues = () => {
                               {/* Sports List */}
                               {venue?.sports && venue.sports.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="text-xs font-medium text-slate-600 mb-2">Available Sports:</div>
+                                  <div className="text-xs font-medium text-slate-600 mb-2">
+                                    Available Sports:
+                                  </div>
                                   <div className="flex flex-wrap gap-1">
-                                    {venue.sports.slice(0, 3).map((sport, idx) => (
-                                      <span
-                                        key={idx}
-                                        className="inline-block bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium"
-                                      >
-                                        {sport.name}
-                                      </span>
-                                    ))}
+                                    {venue.sports
+                                      .slice(0, 3)
+                                      .map((sport, idx) => (
+                                        <span
+                                          key={idx}
+                                          className="inline-block bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium"
+                                        >
+                                          {sport.name}
+                                        </span>
+                                      ))}
                                     {venue.sports.length > 3 && (
                                       <span className="inline-block bg-slate-200 text-slate-600 px-2 py-1 rounded-full text-xs font-medium">
                                         +{venue.sports.length - 3} more
@@ -751,7 +783,9 @@ const AllVenues = () => {
                               {/* Amenities */}
                               {tags.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="text-xs font-medium text-slate-600 mb-2">Amenities:</div>
+                                  <div className="text-xs font-medium text-slate-600 mb-2">
+                                    Amenities:
+                                  </div>
                                   <div className="flex flex-wrap gap-2">
                                     {tags.map((tag) => (
                                       <span
@@ -769,13 +803,21 @@ const AllVenues = () => {
                               <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
                                 <div className="flex items-center gap-2">
                                   <span className="text-yellow-500">⭐</span>
-                                  <span className="text-sm font-semibold text-slate-700">{rating}</span>
-                                  <span className="text-xs text-slate-500">rating</span>
+                                  <span className="text-sm font-semibold text-slate-700">
+                                    {rating}
+                                  </span>
+                                  <span className="text-xs text-slate-500">
+                                    rating
+                                  </span>
                                 </div>
                                 {minPrice && (
                                   <div className="text-right">
-                                    <div className="text-xs text-slate-500">Starting from</div>
-                                    <div className="text-lg font-bold text-green-600">₹{minPrice}/hr</div>
+                                    <div className="text-xs text-slate-500">
+                                      Starting from
+                                    </div>
+                                    <div className="text-lg font-bold text-green-600">
+                                      ₹{minPrice}/hr
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -789,7 +831,9 @@ const AllVenues = () => {
                                   👀 View Details
                                 </button>
                                 <button
-                                  onClick={() => navigate(`/venues/${key}/book`)}
+                                  onClick={() =>
+                                    navigate(`/venues/${key}/book`)
+                                  }
                                   className="rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:text-blue-700 transition-all duration-200"
                                 >
                                   📅 Book Now
