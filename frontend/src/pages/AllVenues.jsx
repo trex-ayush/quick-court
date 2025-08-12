@@ -21,7 +21,7 @@ const getMinPrice = (venue) => {
   const prices = Array.isArray(venue?.courts)
     ? venue.courts
         .map((c) => {
-          const val = c?.perHourPrice ?? c?.pricePerHour; // support both keys
+          const val = c?.perHourPrice ?? c?.pricePerHour;
           return Number(val);
         })
         .filter((n) => Number.isFinite(n) && n > 0)
@@ -30,175 +30,14 @@ const getMinPrice = (venue) => {
   return Math.min(...prices);
 };
 
-const MIN_PRICE = 20;
-const MAX_PRICE = 5000;
-const PRICE_STEP = 50;
-
-const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
-  const [localMin, setLocalMin] = useState(minValue);
-  const [localMax, setLocalMax] = useState(maxValue);
-  const [isDragging, setIsDragging] = useState(null);
-
-  // Update local state when props change
-  useEffect(() => {
-    setLocalMin(minValue);
-    setLocalMax(maxValue);
-  }, [minValue, maxValue]);
-
-  const getPercent = (val) =>
-    Math.round(((val - MIN_PRICE) / (MAX_PRICE - MIN_PRICE)) * 100);
-
-  const leftPercent = getPercent(Math.min(localMin, localMax));
-  const rightPercent = getPercent(Math.max(localMin, localMax));
-
-  const handleMinChange = (e) => {
-    const val = Math.min(Number(e.target.value), localMax - PRICE_STEP);
-    setLocalMin(val);
-    onChange({ min: val, max: localMax });
-  };
-
-  const handleMaxChange = (e) => {
-    const val = Math.max(Number(e.target.value), localMin + PRICE_STEP);
-    setLocalMax(val);
-    onChange({ min: localMin, max: val });
-  };
-
-  const handleMouseDown = (thumb) => {
-    setIsDragging(thumb);
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(null);
-  };
-
-  useEffect(() => {
-    const handleGlobalMouseUp = () => setIsDragging(null);
-    document.addEventListener("mouseup", handleGlobalMouseUp);
-    return () => document.removeEventListener("mouseup", handleGlobalMouseUp);
-  }, []);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <span className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-semibold">
-          ₹{localMin.toLocaleString()}
-        </span>
-        <span className="text-slate-400 text-xs">to</span>
-        <span className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-semibold">
-          ₹{localMax.toLocaleString()}
-        </span>
-      </div>
-
-      <div className="relative px-3 py-6">
-        {/* Track background */}
-        <div className="absolute left-3 right-3 top-1/2 transform -translate-y-1/2 h-3 rounded-full bg-slate-200" />
-
-        {/* Active range track */}
-        <div
-          className="absolute top-1/2 transform -translate-y-1/2 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm"
-          style={{
-            left: `${leftPercent}%`,
-            width: `${rightPercent - leftPercent}%`,
-            marginLeft: "12px",
-            marginRight: "12px",
-          }}
-        />
-
-        {/* Min range input */}
-        <input
-          type="range"
-          min={MIN_PRICE}
-          max={MAX_PRICE}
-          step={PRICE_STEP}
-          value={localMin}
-          onChange={handleMinChange}
-          onMouseDown={() => handleMouseDown("min")}
-          onMouseUp={handleMouseUp}
-          className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
-            isDragging === "min" ? "z-30" : "z-20"
-          }`}
-          style={{
-            background: "transparent",
-            outline: "none",
-          }}
-        />
-
-        {/* Max range input */}
-        <input
-          type="range"
-          min={MIN_PRICE}
-          max={MAX_PRICE}
-          step={PRICE_STEP}
-          value={localMax}
-          onChange={handleMaxChange}
-          onMouseDown={() => handleMouseDown("max")}
-          onMouseUp={handleMouseUp}
-          className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
-            isDragging === "max" ? "z-30" : "z-20"
-          }`}
-          style={{
-            background: "transparent",
-            outline: "none",
-          }}
-        />
-      </div>
-
-      <style jsx>{`
-        .slider-thumb::-webkit-slider-thumb {
-          appearance: none;
-          width: 24px;
-          height: 24px;
-          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-          border: 3px solid #3b82f6;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3),
-            0 2px 6px rgba(0, 0, 0, 0.1);
-          transition: all 0.2s ease;
-          position: relative;
-        }
-
-        .slider-thumb::-webkit-slider-thumb:hover {
-          transform: scale(1.15);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4),
-            0 4px 12px rgba(0, 0, 0, 0.15);
-          border-color: #2563eb;
-        }
-
-        .slider-thumb::-webkit-slider-thumb:active {
-          transform: scale(1.1);
-          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
-        }
-
-        .slider-thumb::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
-          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-          border: 3px solid #3b82f6;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-          transition: all 0.2s ease;
-        }
-
-        .slider-thumb::-moz-range-thumb:hover {
-          transform: scale(1.15);
-          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-        }
-
-        .slider-thumb::-moz-range-track {
-          background: transparent;
-          border: none;
-        }
-
-        .slider-thumb::-webkit-slider-runnable-track {
-          background: transparent;
-          border: none;
-        }
-      `}</style>
-    </div>
-  );
-};
+// Price range options for dropdown
+const PRICE_RANGES = [
+  { label: "Any Price", value: "all", min: 0, max: Infinity },
+  { label: "₹20 - ₹500", value: "budget", min: 20, max: 500 },
+  { label: "₹500 - ₹1500", value: "standard", min: 500, max: 1500 },
+  { label: "₹1500 - ₹3000", value: "premium", min: 1500, max: 3000 },
+  { label: "₹3000+", value: "luxury", min: 3000, max: Infinity },
+];
 
 const AllVenues = () => {
   const [venues, setVenues] = useState([]);
@@ -211,25 +50,19 @@ const AllVenues = () => {
 
   // Filter states
   const [venueType, setVenueType] = useState("all");
-  const [priceRange, setPriceRange] = useState({
-    min: MIN_PRICE,
-    max: MAX_PRICE,
-  });
-  const [selectedSports, setSelectedSports] = useState([]);
+  const [priceRange, setPriceRange] = useState("all");
   const navigate = useNavigate();
 
-  // Legacy filter states (keeping for compatibility)
+  // Legacy filter states
   const [query, setQuery] = useState("");
   const [sport, setSport] = useState("All");
-  const [minPrice, setMinPrice] = useState(MIN_PRICE);
-  const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
   const [minRating, setMinRating] = useState(0);
+  const [sortBy, setSortBy] = useState("name");
 
   const fetchVenues = async () => {
     try {
       setLoading(true);
       setError("");
-      // Fetch all venues at once for client-side pagination
       const { data } = await axios.get(`${base}/venues/`, {
         params: {
           status: "approved",
@@ -243,8 +76,6 @@ const AllVenues = () => {
         ? data
         : [];
       setVenues(list);
-      // Calculate total pages based on filtered results (will be updated in useEffect)
-      // Removed setPages(1) - let useEffect handle it
     } catch (err) {
       setError("Failed to load venues. Please try again.");
       setVenues([]);
@@ -259,13 +90,11 @@ const AllVenues = () => {
       setSearchLoading(true);
       setError("");
 
-      // If no search query, fetch all venues
       if (!searchQuery.city && !searchQuery.venueName) {
         await fetchVenues();
         return;
       }
 
-      // Build search params
       const params = {};
       if (searchQuery.city) params.city = searchQuery.city;
       if (searchQuery.venueName) params.venueName = searchQuery.venueName;
@@ -275,7 +104,7 @@ const AllVenues = () => {
       if (data.venues) {
         setVenues(data.venues);
         setTotalPages(data.totalPages || 1);
-        setPage(1); // Reset to first page after search
+        setPage(1);
       } else {
         setVenues([]);
         setTotalPages(1);
@@ -302,17 +131,18 @@ const AllVenues = () => {
   }, [venues]);
 
   const filtered = useMemo(() => {
-    const filteredVenues = venues.filter((v) => {
+    let filteredVenues = venues.filter((v) => {
       const nameOk = v?.name?.toLowerCase().includes(query.toLowerCase());
       const sportOk =
         sport === "All" || (v?.sports || []).some((s) => s?.name === sport);
       const ratingValue = Number(v?.averageRating || 0);
       const ratingOk = ratingValue >= minRating;
+      
       const price = getMinPrice(v);
-      const priceOk =
-        price === undefined || (price >= minPrice && price <= maxPrice);
+      const selectedRange = PRICE_RANGES.find(r => r.value === priceRange);
+      const priceOk = selectedRange?.value === "all" || 
+        (price !== undefined && price >= selectedRange.min && price <= selectedRange.max);
 
-      // Fixed venue type filtering to use venue.venueType instead of court.isOutdoor
       const typeOk =
         venueType === "all" ||
         (venueType === "indoor" && v?.venueType === "indoor") ||
@@ -320,53 +150,56 @@ const AllVenues = () => {
 
       return nameOk && sportOk && ratingOk && priceOk && typeOk;
     });
+
+    // Sort venues
+    filteredVenues.sort((a, b) => {
+      switch (sortBy) {
+        case "rating":
+          return Number(b?.averageRating || 0) - Number(a?.averageRating || 0);
+        case "price_low":
+          const priceA = getMinPrice(a) || 0;
+          const priceB = getMinPrice(b) || 0;
+          return priceA - priceB;
+        case "price_high":
+          const priceA2 = getMinPrice(a) || 0;
+          const priceB2 = getMinPrice(b) || 0;
+          return priceB2 - priceA2;
+        default:
+          return (a?.name || "").localeCompare(b?.name || "");
+      }
+    });
+
     return filteredVenues;
-  }, [venues, query, sport, minRating, minPrice, maxPrice, venueType]);
+  }, [venues, query, sport, minRating, priceRange, venueType, sortBy]);
 
   // Client-side pagination
-  const ITEMS_PER_PAGE = 6;
+  const ITEMS_PER_PAGE = 9;
   const paginatedVenues = useMemo(() => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    const paginated = filtered.slice(startIndex, endIndex);
-    // console.log('Pagination Debug - Page:', page, 'Start:', startIndex, 'End:', endIndex, 'Paginated count:', paginated.length);
-    return paginated;
+    return filtered.slice(startIndex, endIndex);
   }, [filtered, page]);
 
-  // Update total pages when filtered results change
   useEffect(() => {
     const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-    // console.log('Pagination Debug - Filtered length:', filtered.length, 'ITEMS_PER_PAGE:', ITEMS_PER_PAGE, 'Total pages:', totalPages);
     setTotalPages(totalPages);
-  }, [filtered.length]); // Only depend on filtered.length
+  }, [filtered.length]);
 
-  // Reset page when total pages changes
   useEffect(() => {
     if (page > totalPages && totalPages > 0) {
-      // console.log('Pagination Debug - Resetting page from', page, 'to 1 because total pages is', totalPages);
       setPage(1);
     }
   }, [totalPages, page]);
 
   const nextPage = () => {
-    // console.log('Next Page Debug - Current page:', page, 'Total pages:', totalPages, 'Can go next:', page < totalPages);
     if (page < totalPages) {
-      const p = page + 1;
-      setPage(p);
-      // No need to refetch, filtered will update based on current venues
+      setPage(page + 1);
     }
   };
+  
   const prevPage = () => {
-    console.log(
-      "Prev Page Debug - Current page:",
-      page,
-      "Can go prev:",
-      page > 1
-    );
     if (page > 1) {
-      const p = page - 1;
-      setPage(p);
-      // No need to refetch, filtered will update based on current venues
+      setPage(page - 1);
     }
   };
 
@@ -374,79 +207,72 @@ const AllVenues = () => {
     setQuery("");
     setSport("All");
     setMinRating(0);
-    setMinPrice(MIN_PRICE);
-    setMaxPrice(MAX_PRICE);
+    setPriceRange("all");
     setVenueType("all");
-    setPriceRange({ min: MIN_PRICE, max: MAX_PRICE });
+    setSortBy("name");
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-white">
+    <div className="min-h-screen bg-gray-50">
       <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        {/* Breadcrumb Navigation */}
         <Breadcrumb />
 
-        {/* Enhanced Title */}
+        {/* Header Section */}
         <div className="mb-8 text-center">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+          <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
             Sports Venues
           </h1>
-          <p className="text-slate-600 text-sm sm:text-base">
-            Discover and Book Nearby Venues for Your Favorite Sports
+          <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            Discover and book premium sports facilities in your city
           </p>
 
           {/* Search Summary */}
           {(searchQuery.city || searchQuery.venueName) && (
-            <div className="mt-4 p-3 bg-blue-100 border border-blue-200 rounded-lg">
-              <div className="text-sm text-blue-800 font-medium">
-                🔍 Search Results for:
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg max-w-md mx-auto">
+              <div className="text-sm font-medium text-blue-900 mb-1">
+                Active Search
               </div>
-              <div className="text-xs text-blue-700 mt-1">
+              <div className="text-sm text-blue-700 space-y-1">
                 {searchQuery.city && (
-                  <span className="mr-3">📍 City: {searchQuery.city}</span>
+                  <div>Location: {searchQuery.city}</div>
                 )}
                 {searchQuery.venueName && (
-                  <span>🏟️ Venue: {searchQuery.venueName}</span>
+                  <div>Venue: {searchQuery.venueName}</div>
                 )}
               </div>
             </div>
           )}
 
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
-            <span className="flex items-center gap-1">
-              📍 <span>{filtered.length} venues found</span>
-            </span>
+          <div className="mt-6 flex items-center justify-center gap-6 text-gray-600">
+            <span>{filtered.length} venues found</span>
             {totalPages > 1 && (
-              <span className="text-xs text-slate-400">
-                (Page {page} of {totalPages})
-              </span>
+              <span className="text-sm">Page {page} of {totalPages}</span>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-8">
-          {/* Enhanced Sidebar Filters */}
-          <aside className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 h-fit shadow-lg sticky top-4">
-            <div className="space-y-6">
-              <div className="text-lg font-semibold text-slate-800 border-b border-slate-200 pb-2">
-                🔍 Filter Venues
+        <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-8">
+          {/* Sidebar Filters */}
+          <aside className="lg:sticky lg:top-4 h-fit">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+              <div className="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-3">
+                Filters
               </div>
 
               {/* Search Section */}
-              <div className="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                <div className="text-sm font-semibold text-blue-800">
-                  🔎 Search Venues
+              <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                <div className="text-sm font-semibold text-gray-900">
+                  Search Venues
                 </div>
 
-                {/* City Search */}
                 <div>
-                  <label className="block text-xs font-medium mb-2 text-blue-700">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
                     City/Location
                   </label>
                   <input
                     type="text"
                     placeholder="Enter city name..."
-                    className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     value={searchQuery.city}
                     onChange={(e) =>
                       setSearchQuery((prev) => ({
@@ -458,109 +284,108 @@ const AllVenues = () => {
                   />
                 </div>
 
-                {/* Search Button */}
                 <button
                   onClick={searchVenues}
                   disabled={searchLoading}
-                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                  className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md text-sm font-medium transition-colors"
                 >
-                  {searchLoading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Searching...
-                    </>
-                  ) : (
-                    <>🔍 Search</>
-                  )}
+                  {searchLoading ? "Searching..." : "Search"}
                 </button>
 
-                {/* Clear Search */}
                 {(searchQuery.city || searchQuery.venueName) && (
                   <button
                     onClick={() => {
                       setSearchQuery({ city: "", venueName: "" });
                       fetchVenues();
                     }}
-                    className="w-full px-3 py-1 text-blue-600 hover:text-blue-800 text-xs font-medium transition-colors"
+                    className="w-full px-3 py-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
                   >
-                    ✕ Clear Search
+                    Clear Search
                   </button>
                 )}
               </div>
 
-              {/* Enhanced Search */}
+              {/* Venue Name Search */}
               <div>
-                <label className="block text-sm font-semibold mb-3 text-slate-700">
-                  Search by venue name
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Venue Name
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Type venue name..."
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent pl-10 transition-all"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                    🔍
-                  </div>
-                </div>
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
               </div>
 
-              {/* Enhanced Sport Filter */}
+              {/* Sort Options */}
               <div>
-                <label className="block text-sm font-semibold mb-3 text-slate-700">
-                  Filter by sport type
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Sort By
                 </label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white transition-all"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="name">Name (A-Z)</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="price_low">Price: Low to High</option>
+                  <option value="price_high">Price: High to Low</option>
+                </select>
+              </div>
+
+              {/* Sport Filter */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Sport Type
+                </label>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                   value={sport}
                   onChange={(e) => setSport(e.target.value)}
                 >
                   {allSports.map((s) => (
                     <option key={s} value={s}>
-                      {s === "All" ? "🏆 All Sports" : `⚽ ${s}`}
+                      {s}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Enhanced Price Range */}
+              {/* Price Range */}
               <div>
-                <label className="block text-sm font-semibold mb-3 text-slate-700">
-                  💰 Price range (per hour)
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Price Range (per hour)
                 </label>
-                <PriceRangeSlider
-                  minValue={minPrice}
-                  maxValue={maxPrice}
-                  onChange={({ min, max }) => {
-                    setMinPrice(min);
-                    setMaxPrice(max);
-                  }}
-                />
-                <p className="mt-3 text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
-                  💡 Pricing shown when available from venue courts
-                </p>
+                <select
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(e.target.value)}
+                >
+                  {PRICE_RANGES.map((range) => (
+                    <option key={range.value} value={range.value}>
+                      {range.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Enhanced Venue Type */}
+              {/* Venue Type */}
               <div>
-                <label className="block text-sm font-semibold mb-3 text-slate-700">
-                  🏟️ Choose Venue Type
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Venue Type
                 </label>
                 <div className="space-y-2">
                   {[
-                    { value: "all", label: "🌟 All Types", icon: "🌟" },
-                    { value: "indoor", label: "🏢 Indoor", icon: "🏢" },
-                    { value: "outdoor", label: "🌤️ Outdoor", icon: "🌤️" },
+                    { value: "all", label: "All Types" },
+                    { value: "indoor", label: "Indoor" },
+                    { value: "outdoor", label: "Outdoor" },
                   ].map(({ value, label }) => (
                     <label
                       key={value}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                        venueType === value
-                          ? "border-blue-500 bg-blue-50 text-blue-700"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
+                      className="flex items-center gap-2 cursor-pointer"
                     >
                       <input
                         type="radio"
@@ -568,78 +393,70 @@ const AllVenues = () => {
                         value={value}
                         checked={venueType === value}
                         onChange={(e) => setVenueType(e.target.value)}
-                        className="text-blue-600"
+                        className="text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-sm font-medium">{label}</span>
+                      <span className="text-sm">{label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Enhanced Rating */}
+              {/* Rating Filter */}
               <div>
-                <label className="block text-sm font-semibold mb-3 text-slate-700">
-                  ⭐ Rating Filter
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Minimum Rating
                 </label>
                 <div className="space-y-2">
                   {[
-                    { value: 4, label: "4+ stars", stars: "⭐⭐⭐⭐" },
-                    { value: 3, label: "3+ stars", stars: "⭐⭐⭐" },
-                    { value: 2, label: "2+ stars", stars: "⭐⭐" },
-                    { value: 1, label: "1+ stars", stars: "⭐" },
-                    { value: 0, label: "All ratings", stars: "🌟" },
-                  ].map(({ value, label, stars }) => (
+                    { value: 4, label: "4+ stars" },
+                    { value: 3, label: "3+ stars" },
+                    { value: 2, label: "2+ stars" },
+                    { value: 1, label: "1+ stars" },
+                    { value: 0, label: "All ratings" },
+                  ].map(({ value, label }) => (
                     <label
                       key={value}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
-                        minRating === value
-                          ? "border-yellow-400 bg-yellow-50 text-yellow-700"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
-                      }`}
+                      className="flex items-center gap-2 cursor-pointer"
                     >
                       <input
                         type="radio"
                         name="rating"
                         checked={minRating === value}
                         onChange={() => setMinRating(value)}
-                        className="text-yellow-500"
+                        className="text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-xs">{stars}</span>
-                      <span className="text-sm font-medium">{label}</span>
+                      <span className="text-sm">{label}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              {/* Enhanced Clear Filters Button */}
+              {/* Clear Filters */}
               <button
                 onClick={clearFilters}
-                className="w-full rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition-all duration-200 transform hover:scale-105"
+                className="w-full rounded-md bg-gray-100 hover:bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition-colors"
               >
-                🔄 Clear All Filters
+                Clear All Filters
               </button>
             </div>
           </aside>
 
-          {/* Enhanced Results Grid - Larger Cards */}
+          {/* Results Grid */}
           <div>
             {loading && (
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
-                {Array.from({ length: 6 }).map((_, idx) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {Array.from({ length: 9 }).map((_, idx) => (
                   <div
                     key={idx}
-                    className="h-96 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse"
+                    className="h-80 rounded-lg bg-gray-200 animate-pulse"
                   />
                 ))}
               </div>
             )}
 
             {!loading && error && (
-              <div className="rounded-2xl bg-gradient-to-r from-red-50 to-red-100 text-red-700 px-6 py-4 border border-red-200">
-                <div className="flex items-center gap-2">
-                  <span>❌</span>
-                  <span className="font-medium">{error}</span>
-                </div>
+              <div className="rounded-lg bg-red-50 text-red-700 px-6 py-4 border border-red-200">
+                <span className="font-medium">{error}</span>
               </div>
             )}
 
@@ -647,16 +464,15 @@ const AllVenues = () => {
               <>
                 {paginatedVenues.length === 0 ? (
                   <div className="text-center py-12">
-                    <div className="text-6xl mb-4">🏟️</div>
-                    <h3 className="text-xl font-semibold text-slate-700 mb-2">
+                    <h3 className="text-xl font-medium text-gray-700 mb-2">
                       {searchQuery.city || searchQuery.venueName
                         ? "No venues found"
                         : "No venues available"}
                     </h3>
-                    <p className="text-slate-500 mb-6">
+                    <p className="text-gray-500 mb-6">
                       {searchQuery.city || searchQuery.venueName
-                        ? `No venues match your search criteria. Try adjusting your search terms.`
-                        : "There are currently no venues available. Please check back later."}
+                        ? "No venues match your search criteria. Try adjusting your filters."
+                        : "There are currently no venues available."}
                     </p>
                     {(searchQuery.city || searchQuery.venueName) && (
                       <button
@@ -664,199 +480,136 @@ const AllVenues = () => {
                           setSearchQuery({ city: "", venueName: "" });
                           fetchVenues();
                         }}
-                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                        className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
                       >
-                        🔄 Show All Venues
+                        Show All Venues
                       </button>
                     )}
                   </div>
                 ) : (
                   <>
-                    {/* Larger Cards Grid */}
-                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+                    {/* Venues Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {paginatedVenues.map((venue) => {
                         const key = venue.id || venue._id;
-                        const rating = Number(
-                          venue?.averageRating || 0
-                        ).toFixed(1);
+                        const rating = Number(venue?.averageRating || 0).toFixed(1);
                         const imageSrc = getVenuePrimaryImage(venue);
-                        const sportLabel =
-                          venue?.sports?.[0]?.name ||
-                          (venue?.sports?.length > 1 ? "Multi-sport" : "Sport");
-                        const tags = Array.isArray(venue?.amenities)
-                          ? venue.amenities.slice(0, 4)
-                          : [];
                         const minPrice = getMinPrice(venue);
 
                         return (
-                          <article
+                          <div
                             key={key}
-                            className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
+                            className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden"
                           >
-                            <div className="relative overflow-hidden">
+                            <div className="relative">
                               <img
                                 src={imageSrc}
                                 alt={venue?.name || "Venue"}
-                                className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                className="h-48 w-full object-cover"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-
+                              
                               {/* Rating Badge */}
-                              <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium">
-                                <span className="text-yellow-400">⭐</span>
-                                <span>{rating}</span>
-                              </div>
-
-                              {/* Sport Badge */}
-                              <div className="absolute right-4 top-4">
-                                <span className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-slate-700">
-                                  {sportLabel}
-                                </span>
+                              <div className="absolute top-3 left-3 bg-black bg-opacity-75 text-white px-2 py-1 rounded text-sm font-medium">
+                                ★ {rating}
                               </div>
 
                               {/* Price Badge */}
                               {minPrice && (
-                                <div className="absolute left-4 bottom-4">
-                                  <span className="inline-block rounded-full bg-green-500/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white">
-                                    ₹{minPrice}/hr
-                                  </span>
+                                <div className="absolute top-3 right-3 bg-green-600 text-white px-2 py-1 rounded text-sm font-medium">
+                                  ₹{minPrice}/hr
                                 </div>
                               )}
                             </div>
 
-                            <div className="p-6">
-                              <div className="mb-4">
-                                <h4 className="font-bold text-xl leading-tight text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
+                            <div className="p-4">
+                              <div className="mb-3">
+                                <h3 className="font-semibold text-lg text-gray-900 mb-1">
                                   {venue?.name}
-                                </h4>
-                                <p className="text-sm text-slate-500 flex items-center gap-1 mb-3">
-                                  <span>📍</span>
+                                </h3>
+                                <p className="text-sm text-gray-500">
                                   {venue?.address}
                                 </p>
-
-                                {/* Venue Type */}
-                                {venue?.venueType && (
-                                  <div className="mb-3">
-                                    <span
-                                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
-                                        venue.venueType === "indoor"
-                                          ? "bg-blue-100 text-blue-800"
-                                          : "bg-green-100 text-green-800"
-                                      }`}
-                                    >
-                                      {venue.venueType === "indoor"
-                                        ? "🏢"
-                                        : "🌤️"}
-                                      {venue.venueType.charAt(0).toUpperCase() +
-                                        venue.venueType.slice(1)}
-                                    </span>
-                                  </div>
-                                )}
                               </div>
 
-                              {/* Sports List */}
+                              {/* Venue Type */}
+                              {venue?.venueType && (
+                                <div className="mb-3">
+                                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                                    venue.venueType === "indoor"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-green-100 text-green-800"
+                                  }`}>
+                                    {venue.venueType.charAt(0).toUpperCase() + venue.venueType.slice(1)}
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Sports */}
                               {venue?.sports && venue.sports.length > 0 && (
                                 <div className="mb-4">
-                                  <div className="text-xs font-medium text-slate-600 mb-2">
-                                    Available Sports:
+                                  <div className="text-xs font-medium text-gray-600 mb-2">
+                                    Sports:
                                   </div>
                                   <div className="flex flex-wrap gap-1">
-                                    {venue.sports
-                                      .slice(0, 3)
-                                      .map((sport, idx) => (
-                                        <span
-                                          key={idx}
-                                          className="inline-block bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium"
-                                        >
-                                          {sport.name}
-                                        </span>
-                                      ))}
-                                    {venue.sports.length > 3 && (
-                                      <span className="inline-block bg-slate-200 text-slate-600 px-2 py-1 rounded-full text-xs font-medium">
-                                        +{venue.sports.length - 3} more
+                                    {venue.sports.slice(0, 2).map((sport, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs"
+                                      >
+                                        {sport.name}
+                                      </span>
+                                    ))}
+                                    {venue.sports.length > 2 && (
+                                      <span className="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                                        +{venue.sports.length - 2} more
                                       </span>
                                     )}
                                   </div>
                                 </div>
                               )}
 
-                              {/* Amenities */}
-                              {tags.length > 0 && (
-                                <div className="mb-4">
-                                  <div className="text-xs font-medium text-slate-600 mb-2">
-                                    Amenities:
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    {tags.map((tag) => (
-                                      <span
-                                        key={tag}
-                                        className="inline-block rounded-full bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-2 py-1 text-xs font-medium"
-                                      >
-                                        {tag}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Price and Rating Info */}
-                              <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-yellow-500">⭐</span>
-                                  <span className="text-sm font-semibold text-slate-700">
-                                    {rating}
-                                  </span>
-                                  <span className="text-xs text-slate-500">
-                                    rating
-                                  </span>
-                                </div>
+                              {/* Stats */}
+                              <div className="flex items-center justify-between mb-4 text-sm text-gray-600">
+                                <span>Rating: {rating}</span>
                                 {minPrice && (
-                                  <div className="text-right">
-                                    <div className="text-xs text-slate-500">
-                                      Starting from
-                                    </div>
-                                    <div className="text-lg font-bold text-green-600">
-                                      ₹{minPrice}/hr
-                                    </div>
-                                  </div>
+                                  <span className="font-medium text-green-600">
+                                    From ₹{minPrice}/hr
+                                  </span>
                                 )}
                               </div>
 
-                              {/* Action Buttons */}
-                              <div className="flex items-center gap-3">
-                                <button
-                                  onClick={() => navigate(`/venues/${key}`)}
-                                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
-                                >
-                                  View Details & Book
-                                </button>
-                                
-                              </div>
+                              {/* Action Button */}
+                              <button
+                                onClick={() => navigate(`/venues/${key}`)}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium transition-colors"
+                              >
+                                View Details
+                              </button>
                             </div>
-                          </article>
+                          </div>
                         );
                       })}
                     </div>
 
-                    {/* Enhanced Pagination - Only show when there are venues */}
+                    {/* Pagination */}
                     {paginatedVenues.length > 0 && totalPages > 1 && (
-                      <div className="mt-12 flex items-center justify-center gap-4">
+                      <div className="mt-8 flex items-center justify-center gap-4">
                         <button
                           onClick={prevPage}
                           disabled={page <= 1}
-                          className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          ⬅️ Previous
+                          Previous
                         </button>
-                        <div className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 font-semibold">
+                        <span className="px-4 py-2 text-sm text-gray-700">
                           Page {page} of {totalPages}
-                        </div>
+                        </span>
                         <button
                           onClick={nextPage}
                           disabled={page >= totalPages}
-                          className="px-6 py-3 rounded-xl border-2 border-slate-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 flex items-center gap-2"
+                          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          Next ➡️
+                          Next
                         </button>
                       </div>
                     )}
