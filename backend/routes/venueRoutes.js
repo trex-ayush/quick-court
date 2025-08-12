@@ -28,6 +28,7 @@ router.get("/search", searchVenues);
 router.get("/availability", checkVenueAvailability);
 router.get("/my", protectedOwner, getMyVenues);
 router.get("/:venueId", getVenueById);
+
 // Allow owners or admins to create (protectedOwner already allows admin)
 router.post(
   "/createVenue",
@@ -35,17 +36,26 @@ router.post(
   upload.array("photos", 5),
   createVenue
 );
-// Allow owners or admins to update/delete their venue; admins pass protectedOwner too
-router.put("/:venueId", protectedOwner, updateVenue);
+
+// FIXED: Allow owners or admins to update their venue with file upload
+router.put(
+  "/:venueId", 
+  protectedOwner, 
+  upload.array("photos", 5), // Added file upload middleware
+  updateVenue
+);
+
 router.delete("/:venueId", protectedOwner, deleteVenue);
 router.post(
   "/:venueId/toggle-availability",
   protectedOwner,
   toggleVenueAvailability
 );
+
 // Ratings and comments for a venue
 router.get("/:venueId/ratings", getVenueWithRatings);
 
+// Admin routes
 router.post("/:venueId/approve", protectedAdmin, approveVenue);
 router.post("/:venueId/reject", protectedAdmin, rejectVenue);
 router.post("/:venueId/ban", protectedAdmin, toggleBanVenue);

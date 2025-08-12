@@ -828,16 +828,9 @@ const AllVenues = () => {
                                   onClick={() => navigate(`/venues/${key}`)}
                                   className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
                                 >
-                                  👀 View Details
+                                  View Details & Book
                                 </button>
-                                <button
-                                  onClick={() =>
-                                    navigate(`/venues/${key}/book`)
-                                  }
-                                  className="rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:text-blue-700 transition-all duration-200"
-                                >
-                                  📅 Book Now
-                                </button>
+                                
                               </div>
                             </div>
                           </article>

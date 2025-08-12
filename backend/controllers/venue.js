@@ -182,7 +182,6 @@ exports.createVenue = async (req, res) => {
   }
 };
 
-// UPDATE VENUE
 exports.updateVenue = async (req, res) => {
   try {
     const { venueId } = req.params;
@@ -208,38 +207,110 @@ exports.updateVenue = async (req, res) => {
       body.courts = body.courts.map((c) => ({
         name: c?.name,
         perHourPrice: Number(c?.perHourPrice) || 0,
+        // Include sportId if it exists
+        ...(c?.sportId && { sportId: c.sportId })
       }));
     }
 
-    // Reconstruct openingHours from bracketed keys
-    const days = [
-      "monday",
-      "tuesday",
-      "wednesday",
-      "thursday",
-      "friday",
-      "saturday",
-      "sunday",
-    ];
-    const openingHours = {};
-    if (body["openingHours[_24hours]"] !== undefined) {
-      openingHours._24hours = String(body["openingHours[_24hours]"]) === "true";
-      delete body["openingHours[_24hours]"];
-    }
-    days.forEach((d) => {
-      const openKey = `openingHours[${d}][open]`;
-      const closeKey = `openingHours[${d}][close]`;
-      const open = body[openKey];
-      const close = body[closeKey];
-      if (open || close) {
-        openingHours[d] = {};
-        if (open) openingHours[d].open = open;
-        if (close) openingHours[d].close = close;
+    // Handle openingHours - check if it's sent as JSON string first
+    let openingHours = {};
+    
+    // Check if openingHours is sent as a JSON string (from React)
+    if (typeof body.openingHours === "string") {
+      try {
+        openingHours = JSON.parse(body.openingHours);
+        delete body.openingHours; // Remove the string version
+      } catch (e) {
+        console.error("Failed to parse openingHours JSON:", e);
+        // Fall through to bracket notation parsing
       }
-      if (openKey in body) delete body[openKey];
-      if (closeKey in body) delete body[closeKey];
-    });
+    }
+    
+    // If not parsed from JSON, reconstruct from bracketed keys
+    if (Object.keys(openingHours).length === 0) {
+      const days = [
+        "monday",
+        "tuesday", 
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ];
+      
+      // Handle 24 hours flag
+      if (body["openingHours[_24hours]"] !== undefined) {
+        openingHours._24hours = String(body["openingHours[_24hours]"]) === "true";
+        delete body["openingHours[_24hours]"];
+      }
+
+      // Handle regular days
+      days.forEach((d) => {
+        const openKey = `openingHours[${d}][open]`;
+        const closeKey = `openingHours[${d}][close]`;
+        const open = body[openKey];
+        const close = body[closeKey];
+        
+        if (open !== undefined || close !== undefined) {
+          openingHours[d] = {};
+          if (open) openingHours[d].open = open;
+          if (close) openingHours[d].close = close;
+        }
+        
+        // Clean up the body
+        delete body[openKey];
+        delete body[closeKey];
+      });
+
+      // Handle custom days
+      const customDays = [];
+      let customDayIndex = 0;
+      
+      // Look for custom day entries
+      while (body[`openingHours[customDays][${customDayIndex}][day]`] !== undefined) {
+        const dayKey = `openingHours[customDays][${customDayIndex}][day]`;
+        const openKey = `openingHours[customDays][${customDayIndex}][open]`;
+        const closeKey = `openingHours[customDays][${customDayIndex}][close]`;
+        
+        const customDay = {
+          day: body[dayKey],
+          open: body[openKey] || "",
+          close: body[closeKey] || ""
+        };
+        
+        customDays.push(customDay);
+        
+        // Clean up
+        delete body[dayKey];
+        delete body[openKey]; 
+        delete body[closeKey];
+        
+        customDayIndex++;
+      }
+      
+      if (customDays.length > 0) {
+        openingHours.customDays = customDays;
+      }
+    }
+    
+    // Validate and sanitize openingHours before adding to body
     if (Object.keys(openingHours).length > 0) {
+      // Ensure _24hours is a boolean
+      if (openingHours._24hours !== undefined) {
+        openingHours._24hours = Boolean(openingHours._24hours);
+      }
+      
+      // Validate day structures
+      const validDays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+      validDays.forEach(day => {
+        if (openingHours[day]) {
+          // Ensure day structure is correct
+          if (typeof openingHours[day] !== 'object' || openingHours[day] === null) {
+            delete openingHours[day];
+          }
+        }
+      });
+      
       body.openingHours = openingHours;
     }
 
@@ -248,7 +319,8 @@ exports.updateVenue = async (req, res) => {
       try {
         body.amenities = JSON.parse(body.amenities);
       } catch (e) {
-        body.amenities = body.amenities.split(",").map((a) => a.trim());
+        // Fallback to comma-separated parsing
+        body.amenities = body.amenities.split(",").map((a) => a.trim()).filter(Boolean);
       }
     }
 
@@ -257,8 +329,14 @@ exports.updateVenue = async (req, res) => {
       try {
         body.sports = JSON.parse(body.sports);
       } catch (e) {
-        body.sports = body.sports.split(",").map((s) => s.trim());
+        // Fallback to comma-separated parsing
+        body.sports = body.sports.split(",").map((s) => s.trim()).filter(Boolean);
       }
+    }
+
+    // Convert boolean fields
+    if (body.isActive !== undefined) {
+      body.isActive = String(body.isActive) === "true";
     }
 
     const updates = { ...body };
@@ -266,10 +344,11 @@ exports.updateVenue = async (req, res) => {
     // Handle photo updates
     if (req.files?.length) {
       const photoUrls = req.files.map((file) => file.path);
-      // If replacing all photos, use $set, otherwise append
+      
       if (body.replacePhotos === "true") {
         updates.photos = photoUrls;
       } else {
+        // Use $push to append new photos
         updates.$push = { photos: { $each: photoUrls } };
       }
     }
@@ -280,11 +359,14 @@ exports.updateVenue = async (req, res) => {
     delete updates.isVerified;
     delete updates.replacePhotos;
 
+    // Find and update the venue
     const venue = await Venue.findOneAndUpdate(
       { _id: venueId, owner: req.user._id },
       updates,
       { new: true, runValidators: true }
-    ).populate("sports", "name");
+    )
+    .populate("owner", "name email")
+    .populate("sports", "name");
 
     if (!venue) {
       return res
@@ -294,6 +376,7 @@ exports.updateVenue = async (req, res) => {
 
     res.status(200).json(venue);
   } catch (err) {
+    console.error("Update venue error:", err);
     res.status(400).json({ error: err.message });
   }
 };

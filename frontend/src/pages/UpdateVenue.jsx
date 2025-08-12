@@ -34,7 +34,7 @@ const UpdateVenue = () => {
       saturday: { open: "", close: "" },
       sunday: { open: "", close: "" },
       _24hours: false,
-      customDays: [], // Ensure this is always initialized as an array
+      customDays: [],
     },
   });
 
@@ -56,113 +56,55 @@ const UpdateVenue = () => {
 
   const venueTypeOptions = ["indoor", "outdoor", "all"];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [venueResponse, sportsResponse] = await Promise.all([
-          axios.get(`${base}/venues/${venueId}`),
-          axios.get(`${base}/sports`)
-        ]);
-
-        const venueData = venueResponse.data;
-        setVenue(venueData);
-        setSports(sportsResponse.data);
-
-        // Set form data
-        setFormData({
-          name: venueData.name || "",
-          description: venueData.description || "",
-          address: venueData.address || "",
-          googleMapLink: venueData.googleMapLink || "",
-          venueType: venueData.venueType || "indoor",
-          isActive: venueData.isActive !== undefined ? venueData.isActive : true,
-          amenities: venueData.amenities || [],
-          courts: venueData.courts?.map(court => ({
-            ...court,
-            sportId: court.sportId || venueData.sports?.find(s => s.name === court.name)?._id
-          })) || [],
-          sports: venueData.sports?.map(s => s._id) || [],
-          openingHours: venueData.openingHours || {
-            monday: { open: "", close: "" },
-            tuesday: { open: "", close: "" },
-            wednesday: { open: "", close: "" },
-            thursday: { open: "", close: "" },
-            friday: { open: "", close: "" },
-            saturday: { open: "", close: "" },
-            sunday: { open: "", close: "" },
-            _24hours: false,
-            customDays: venueData.openingHours?.customDays?.map(customDay => ({
-              ...customDay,
-              day: customDay.day || "monday" // Ensure day field exists
-            })) || [],
-          },
-        });
-
-        setPhotos(venueData.photos || []);
-      } catch (err) {
-        setError("Failed to load venue data");
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [venueId]);
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
   const handleAmenityChange = (amenity) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       amenities: prev.amenities.includes(amenity)
-        ? prev.amenities.filter(a => a !== amenity)
-        : [...prev.amenities, amenity]
+        ? prev.amenities.filter((a) => a !== amenity)
+        : [...prev.amenities, amenity],
     }));
   };
 
   const handleSportChange = (sportId) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newSports = prev.sports.includes(sportId)
-        ? prev.sports.filter(s => s !== sportId)
+        ? prev.sports.filter((s) => s !== sportId)
         : [...prev.sports, sportId];
-      
-      // Get the sport object for the new sport
-      const newSport = sports.find(s => s._id === sportId);
-      
+
+      const sport = sports.find((s) => s._id === sportId);
       let newCourts = [...prev.courts];
-      
+
       if (newSports.includes(sportId)) {
         // Sport was added - add a new court if it doesn't exist
-        const courtExists = newCourts.some(court => 
-          court.sportId === sportId || court.name === newSport.name
+        const courtExists = newCourts.some(
+          (court) => court.sportId === sportId
         );
-        
-        if (!courtExists) {
+
+        if (!courtExists && sport) {
           newCourts.push({
-            name: newSport.name,
-            sportId: sportId,
-            perHourPrice: 0
+            name: sport.name,
+            sportId: sportId, // FIXED: Always include sportId
+            perHourPrice: 0,
           });
         }
       } else {
         // Sport was removed - remove the corresponding court
-        newCourts = newCourts.filter(court => 
-          court.sportId !== sportId && court.name !== newSport.name
-        );
+        newCourts = newCourts.filter((court) => court.sportId !== sportId);
       }
-      
+
       return {
         ...prev,
         sports: newSports,
-        courts: newCourts
+        courts: newCourts,
       };
     });
   };
@@ -171,56 +113,63 @@ const UpdateVenue = () => {
     const updatedCourts = [...formData.courts];
     updatedCourts[index] = {
       ...updatedCourts[index],
-      [field]: field === 'perHourPrice' ? Number(value) : value
+      [field]: field === "perHourPrice" ? Number(value) : value,
     };
-    setFormData(prev => ({ ...prev, courts: updatedCourts }));
+    setFormData((prev) => ({ ...prev, courts: updatedCourts }));
   };
 
   const handleOpeningHoursChange = (day, field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       openingHours: {
         ...prev.openingHours,
         [day]: {
           ...prev.openingHours[day],
-          [field]: value
-        }
-      }
+          [field]: value,
+        },
+      },
     }));
   };
 
   const addCustomDay = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       openingHours: {
         ...prev.openingHours,
         customDays: [
           ...(prev.openingHours.customDays || []),
-          { id: Date.now(), day: "monday", open: "", close: "" }
-        ]
-      }
+          {
+            id: Date.now() + Math.random(),
+            day: "monday",
+            open: "",
+            close: "",
+          },
+        ],
+      },
     }));
   };
 
   const updateCustomDay = (index, field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       openingHours: {
         ...prev.openingHours,
-        customDays: (prev.openingHours.customDays || []).map((day, i) => 
+        customDays: (prev.openingHours.customDays || []).map((day, i) =>
           i === index ? { ...day, [field]: value } : day
-        )
-      }
+        ),
+      },
     }));
   };
 
   const removeCustomDay = (index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       openingHours: {
         ...prev.openingHours,
-        customDays: (prev.openingHours.customDays || []).filter((_, i) => i !== index)
-      }
+        customDays: (prev.openingHours.customDays || []).filter(
+          (_, i) => i !== index
+        ),
+      },
     }));
   };
 
@@ -230,7 +179,7 @@ const UpdateVenue = () => {
   };
 
   const removePhoto = (index) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -243,58 +192,38 @@ const UpdateVenue = () => {
       const formDataToSend = new FormData();
 
       // Add basic fields
-      Object.keys(formData).forEach(key => {
-        if (key === 'courts') {
-          // Ensure courts have proper structure with sportId
-          const formattedCourts = formData.courts.map(court => ({
-            name: court.name,
-            perHourPrice: court.perHourPrice,
-            sportId: court.sportId
-          }));
-          formDataToSend.append(key, JSON.stringify(formattedCourts));
-        } else if (key === 'amenities' || key === 'sports') {
-          formDataToSend.append(key, JSON.stringify(formData[key]));
-        } else if (key === 'openingHours') {
-          // Handle opening hours
-          Object.keys(formData.openingHours).forEach(day => {
-            if (day === '_24hours') {
-              formDataToSend.append(`openingHours[${day}]`, formData.openingHours[day]);
-            } else if (day === 'customDays') {
-              // Handle custom days
-              if (formData.openingHours.customDays && Array.isArray(formData.openingHours.customDays)) {
-                formData.openingHours.customDays.forEach((customDay, index) => {
-                  if (customDay && customDay.day && (customDay.open || customDay.close)) {
-                    formDataToSend.append(`openingHours[customDays][${index}][day]`, customDay.day);
-                    if (customDay.open) {
-                      formDataToSend.append(`openingHours[customDays][${index}][open]`, customDay.open);
-                    }
-                    if (customDay.close) {
-                      formDataToSend.append(`openingHours[customDays][${index}][close]`, customDay.close);
-                    }
-                  }
-                });
-              }
-            } else {
-              const dayHours = formData.openingHours[day];
-              if (dayHours.open) {
-                formDataToSend.append(`openingHours[${day}][open]`, dayHours.open);
-              }
-              if (dayHours.close) {
-                formDataToSend.append(`openingHours[${day}][close]`, dayHours.close);
-              }
-            }
-          });
-        } else {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("address", formData.address);
+      formDataToSend.append("googleMapLink", formData.googleMapLink);
+      formDataToSend.append("venueType", formData.venueType);
+      formDataToSend.append("isActive", formData.isActive);
+
+      // Add arrays as JSON strings
+      formDataToSend.append("amenities", JSON.stringify(formData.amenities));
+      formDataToSend.append("sports", JSON.stringify(formData.sports));
+
+      // Format courts properly - ensure sportId is included
+      const formattedCourts = formData.courts.map((court) => ({
+        name: court.name,
+        perHourPrice: Number(court.perHourPrice) || 0,
+        sportId: court.sportId,
+      }));
+      formDataToSend.append("courts", JSON.stringify(formattedCourts));
+
+      // FIXED: Send openingHours as JSON string instead of form fields
+      // This prevents the casting error by keeping the structure intact
+      formDataToSend.append(
+        "openingHours",
+        JSON.stringify(formData.openingHours)
+      );
 
       // Add photos
       if (newPhotos.length > 0) {
-        newPhotos.forEach(photo => {
-          formDataToSend.append('photos', photo);
+        newPhotos.forEach((photo) => {
+          formDataToSend.append("photos", photo); // Changed from 'photos' array to individual files
         });
-        formDataToSend.append('replacePhotos', replacePhotos);
+        formDataToSend.append("replacePhotos", replacePhotos);
       }
 
       const response = await axios.put(
@@ -302,7 +231,7 @@ const UpdateVenue = () => {
         formDataToSend,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            "Content-Type": "multipart/form-data",
           },
           withCredentials: true,
         }
@@ -310,27 +239,93 @@ const UpdateVenue = () => {
 
       setSuccess("Venue updated successfully!");
       setVenue(response.data);
-      
-      // Update photos if replaced
+
+      // Update photos state
       if (replacePhotos && newPhotos.length > 0) {
-        setPhotos(newPhotos.map(file => URL.createObjectURL(file)));
+        // If replacing photos, get URLs from response instead of creating object URLs
+        setPhotos(response.data.photos || []);
       } else if (newPhotos.length > 0) {
-        setPhotos(prev => [...prev, ...newPhotos.map(file => URL.createObjectURL(file))]);
+        // If appending photos, get updated photos from response
+        setPhotos(response.data.photos || []);
       }
-      
+
       setNewPhotos([]);
       setReplacePhotos(false);
 
       setTimeout(() => {
         navigate(`/venues/${venueId}`);
       }, 2000);
-
     } catch (err) {
+      console.error("Update venue error:", err);
       setError(err.response?.data?.error || "Failed to update venue");
     } finally {
       setSaving(false);
     }
   };
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [venueResponse, sportsResponse] = await Promise.all([
+          axios.get(`${base}/venues/${venueId}`),
+          axios.get(`${base}/sports`)
+        ]);
+  
+        const venueData = venueResponse.data;
+        setVenue(venueData);
+        setSports(sportsResponse.data);
+  
+        // FIXED: Set form data with proper court mapping
+        setFormData({
+          name: venueData.name || "",
+          description: venueData.description || "",
+          address: venueData.address || "",
+          googleMapLink: venueData.googleMapLink || "",
+          venueType: venueData.venueType || "indoor",
+          isActive: venueData.isActive !== undefined ? venueData.isActive : true,
+          amenities: Array.isArray(venueData.amenities) ? venueData.amenities : [],
+          courts: Array.isArray(venueData.courts) ? venueData.courts.map(court => {
+            // FIXED: Find sportId from venue's sports array
+            const relatedSport = venueData.sports?.find(s => s.name === court.name);
+            return {
+              name: court.name,
+              perHourPrice: Number(court.perHourPrice) || 0,
+              sportId: court.sportId || relatedSport?._id || null
+            };
+          }) : [],
+          sports: Array.isArray(venueData.sports) ? venueData.sports.map(s => s._id) : [],
+          openingHours: {
+            monday: venueData.openingHours?.monday || { open: "", close: "" },
+            tuesday: venueData.openingHours?.tuesday || { open: "", close: "" },
+            wednesday: venueData.openingHours?.wednesday || { open: "", close: "" },
+            thursday: venueData.openingHours?.thursday || { open: "", close: "" },
+            friday: venueData.openingHours?.friday || { open: "", close: "" },
+            saturday: venueData.openingHours?.saturday || { open: "", close: "" },
+            sunday: venueData.openingHours?.sunday || { open: "", close: "" },
+            _24hours: venueData.openingHours?._24hours || false,
+            customDays: Array.isArray(venueData.openingHours?.customDays) 
+              ? venueData.openingHours.customDays.map(customDay => ({
+                  id: customDay.id || Date.now() + Math.random(),
+                  day: customDay.day || "monday",
+                  open: customDay.open || "",
+                  close: customDay.close || ""
+                }))
+              : [],
+          },
+        });
+  
+        setPhotos(Array.isArray(venueData.photos) ? venueData.photos : []);
+      } catch (err) {
+        setError("Failed to load venue data");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchData();
+  }, [venueId]);
 
   if (loading) {
     return (
@@ -339,7 +334,7 @@ const UpdateVenue = () => {
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map(i => (
+              {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="h-12 bg-gray-200 rounded"></div>
               ))}
             </div>
@@ -356,8 +351,16 @@ const UpdateVenue = () => {
           <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -374,19 +377,31 @@ const UpdateVenue = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
         <Breadcrumb />
-        
+
         {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Update Venue</h1>
-          <p className="text-lg text-gray-600">Modify your venue information and settings</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+            Update Venue
+          </h1>
+          <p className="text-lg text-gray-600">
+            Modify your venue information and settings
+          </p>
         </div>
 
         {error && (
           <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-lg">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -400,8 +415,16 @@ const UpdateVenue = () => {
           <div className="mb-6 bg-green-50 border-l-4 border-green-400 p-4 rounded-lg">
             <div className="flex">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-green-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="ml-3">
@@ -416,11 +439,23 @@ const UpdateVenue = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex items-center mb-6">
               <div className="p-3 bg-blue-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                  />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Basic Information</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Basic Information
+              </h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -448,7 +483,7 @@ const UpdateVenue = () => {
                   onChange={handleInputChange}
                   className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                 >
-                  {venueTypeOptions.map(type => (
+                  {venueTypeOptions.map((type) => (
                     <option key={type} value={type}>
                       {type.charAt(0).toUpperCase() + type.slice(1)}
                     </option>
@@ -507,8 +542,18 @@ const UpdateVenue = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex items-center mb-6">
               <div className="p-3 bg-green-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Availability</h2>
@@ -528,18 +573,36 @@ const UpdateVenue = () => {
           </div>
 
           {/* Sports */}
-          <div id="sports-section" className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+          <div
+            id="sports-section"
+            className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8"
+          >
             <div className="flex items-center mb-6">
               <div className="p-3 bg-purple-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                <svg
+                  className="w-6 h-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                  />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Supported Sports</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Supported Sports
+              </h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {sports.map(sport => (
-                <div key={sport._id} className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-200">
+              {sports.map((sport) => (
+                <div
+                  key={sport._id}
+                  className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                >
                   <input
                     type="checkbox"
                     id={sport._id}
@@ -547,7 +610,10 @@ const UpdateVenue = () => {
                     onChange={() => handleSportChange(sport._id)}
                     className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded transition-all duration-200"
                   />
-                  <label htmlFor={sport._id} className="ml-3 text-sm font-medium text-gray-900 cursor-pointer">
+                  <label
+                    htmlFor={sport._id}
+                    className="ml-3 text-sm font-medium text-gray-900 cursor-pointer"
+                  >
                     {sport.name}
                   </label>
                 </div>
@@ -555,14 +621,16 @@ const UpdateVenue = () => {
             </div>
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-xl">
               <p className="text-blue-800 text-sm">
-                💡 <strong>Tip:</strong> Selecting sports will automatically create courts in the "Courts & Pricing" section below. 
-                You can then set the hourly price for each court.
+                💡 <strong>Tip:</strong> Selecting sports will automatically
+                create courts in the "Courts & Pricing" section below. You can
+                then set the hourly price for each court.
               </p>
             </div>
             {formData.sports.length === 0 && (
               <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-xl">
                 <p className="text-yellow-800 text-sm">
-                  ⚠️ Please select at least one sport to enable courts and pricing configuration.
+                  ⚠️ Please select at least one sport to enable courts and
+                  pricing configuration.
                 </p>
               </div>
             )}
@@ -574,27 +642,44 @@ const UpdateVenue = () => {
               <div className="flex justify-between items-center mb-6">
                 <div className="flex items-center">
                   <div className="p-3 bg-emerald-100 rounded-xl mr-4">
-                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    <svg
+                      className="w-6 h-6 text-emerald-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                      />
                     </svg>
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Courts & Pricing</h2>
-                    <p className="text-sm text-gray-600 mt-1">Courts are automatically created based on selected sports</p>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Courts & Pricing
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Courts are automatically created based on selected sports
+                    </p>
                   </div>
                 </div>
-                {/* The "Add Court" button is removed as courts are now managed by sports selection */}
               </div>
               <div className="space-y-6">
                 {formData.courts.map((court, index) => (
-                  <div key={index} className="p-6 bg-gray-50 rounded-xl border border-gray-200">
+                  <div
+                    key={index}
+                    className="p-6 bg-gray-50 rounded-xl border border-gray-200"
+                  >
                     <div className="flex gap-4 items-end">
                       <div className="flex-1">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Court: {court.name}
                         </label>
                         <p className="text-sm text-gray-500 mb-3">
-                          This court is automatically created for {court.name} sport
+                          This court is automatically created for {court.name}{" "}
+                          sport
                         </p>
                       </div>
                       <div className="flex-1">
@@ -604,7 +689,13 @@ const UpdateVenue = () => {
                         <input
                           type="number"
                           value={court.perHourPrice}
-                          onChange={(e) => handleCourtChange(index, 'perHourPrice', e.target.value)}
+                          onChange={(e) =>
+                            handleCourtChange(
+                              index,
+                              "perHourPrice",
+                              e.target.value
+                            )
+                          }
                           min="0"
                           className="w-full rounded-xl border border-gray-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all duration-200 bg-white"
                           placeholder="0"
@@ -615,15 +706,32 @@ const UpdateVenue = () => {
                 ))}
                 {formData.courts.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    <svg
+                      className="w-16 h-16 mx-auto text-gray-300 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                      />
                     </svg>
                     <p className="text-lg font-medium">No courts available</p>
-                    <p className="text-sm">Select sports from the "Supported Sports" section above to automatically create courts</p>
+                    <p className="text-sm">
+                      Select sports from the "Supported Sports" section above to
+                      automatically create courts
+                    </p>
                     <div className="mt-4">
                       <button
                         type="button"
-                        onClick={() => document.getElementById('sports-section')?.scrollIntoView({ behavior: 'smooth' })}
+                        onClick={() =>
+                          document
+                            .getElementById("sports-section")
+                            ?.scrollIntoView({ behavior: "smooth" })
+                        }
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
                       >
                         Go to Supported Sports
@@ -639,18 +747,36 @@ const UpdateVenue = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex items-center mb-6">
               <div className="p-3 bg-orange-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-6 h-6 text-orange-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Opening Hours</h2>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Opening Hours
+              </h2>
             </div>
             <div className="space-y-6">
               <div className="flex items-center p-4 bg-gray-50 rounded-xl">
                 <input
                   type="checkbox"
                   checked={formData.openingHours._24hours}
-                  onChange={(e) => handleOpeningHoursChange('_24hours', '_24hours', e.target.checked)}
+                  onChange={(e) =>
+                    handleOpeningHoursChange(
+                      "_24hours",
+                      "_24hours",
+                      e.target.checked
+                    )
+                  }
                   className="h-5 w-5 text-orange-600 focus:ring-orange-500 border-gray-300 rounded transition-all duration-200"
                 />
                 <label className="ml-3 text-lg text-gray-900 font-medium">
@@ -659,127 +785,222 @@ const UpdateVenue = () => {
               </div>
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
                 <p className="text-blue-800 text-sm">
-                  💡 <strong>Note:</strong> The 24 hours option indicates if your venue operates around the clock. 
-                  You can still set specific opening hours for individual days below, which will override the 24 hours setting for those specific days.
+                  💡 <strong>Note:</strong> The 24 hours option indicates if
+                  your venue operates around the clock. You can still set
+                  specific opening hours for individual days below, which will
+                  override the 24 hours setting for those specific days.
                 </p>
               </div>
 
-              {/* Standard Days - Always show regardless of 24 hours setting */}
+              {/* Standard Days */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Standard Opening Hours</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Standard Opening Hours
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {Object.keys(formData.openingHours).filter(day => day !== '_24hours' && day !== 'customDays').map(day => (
-                    <div key={day} className="border border-gray-200 rounded-xl p-6 bg-gray-50">
-                      <h3 className="font-bold text-gray-900 mb-4 capitalize text-lg">{day}</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Open</label>
-                          <input
-                            type="time"
-                            value={formData.openingHours[day].open}
-                            onChange={(e) => handleOpeningHoursChange(day, 'open', e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Close</label>
-                          <input
-                            type="time"
-                            value={formData.openingHours[day].close}
-                            onChange={(e) => handleOpeningHoursChange(day, 'close', e.target.value)}
-                            className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
-                          />
+                  {Object.keys(formData.openingHours)
+                    .filter((day) => day !== "_24hours" && day !== "customDays")
+                    .map((day) => (
+                      <div
+                        key={day}
+                        className="border border-gray-200 rounded-xl p-6 bg-gray-50"
+                      >
+                        <h3 className="font-bold text-gray-900 mb-4 capitalize text-lg">
+                          {day}
+                        </h3>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Open
+                            </label>
+                            <input
+                              type="time"
+                              value={formData.openingHours[day].open}
+                              onChange={(e) =>
+                                handleOpeningHoursChange(
+                                  day,
+                                  "open",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              Close
+                            </label>
+                            <input
+                              type="time"
+                              value={formData.openingHours[day].close}
+                              onChange={(e) =>
+                                handleOpeningHoursChange(
+                                  day,
+                                  "close",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
 
               {/* Custom Days Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">Custom Days</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Custom Days
+                  </h3>
                   <button
                     type="button"
                     onClick={addCustomDay}
                     className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                      />
                     </svg>
                     Add Custom Day
                   </button>
                 </div>
 
-                {formData.openingHours.customDays && formData.openingHours.customDays.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {formData.openingHours.customDays.map((customDay, index) => (
-                      <div key={customDay.id} className="border border-orange-200 rounded-xl p-6 bg-orange-50">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-bold text-gray-900 text-lg">Custom Day {index + 1}</h4>
-                          <button
-                            type="button"
-                            onClick={() => removeCustomDay(index)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
+                {formData.openingHours.customDays &&
+                  formData.openingHours.customDays.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {formData.openingHours.customDays.map(
+                        (customDay, index) => (
+                          <div
+                            key={customDay.id}
+                            className="border border-orange-200 rounded-xl p-6 bg-orange-50"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Day of Week</label>
-                            <select
-                              value={customDay.day}
-                              onChange={(e) => updateCustomDay(index, 'day', e.target.value)}
-                              className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
-                            >
-                              <option value="monday">Monday</option>
-                              <option value="tuesday">Tuesday</option>
-                              <option value="wednesday">Wednesday</option>
-                              <option value="thursday">Thursday</option>
-                              <option value="friday">Friday</option>
-                              <option value="saturday">Saturday</option>
-                              <option value="sunday">Sunday</option>
-                            </select>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-2">Open</label>
-                              <input
-                                type="time"
-                                value={customDay.open}
-                                onChange={(e) => updateCustomDay(index, 'open', e.target.value)}
-                                className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
-                              />
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-bold text-gray-900 text-lg">
+                                Custom Day {index + 1}
+                              </h4>
+                              <button
+                                type="button"
+                                onClick={() => removeCustomDay(index)}
+                                className="text-red-600 hover:text-red-800 transition-colors"
+                              >
+                                <svg
+                                  className="w-5 h-5"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                  />
+                                </svg>
+                              </button>
                             </div>
-                            <div>
-                              <label className="block text-sm font-semibold text-gray-700 mb-2">Close</label>
-                              <input
-                                type="time"
-                                value={customDay.close}
-                                onChange={(e) => updateCustomDay(index, 'close', e.target.value)}
-                                className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:border-orange-500 transition-all duration-200 bg-white"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                {(!formData.openingHours.customDays || formData.openingHours.customDays.length === 0) && (
+                            <div className="space-y-4">
+                              <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                  Day of Week
+                                </label>
+                                <select
+                                  value={customDay.day}
+                                  onChange={(e) =>
+                                    updateCustomDay(
+                                      index,
+                                      "day",
+                                      e.target.value
+                                    )
+                                  }
+                                  className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
+                                >
+                                  <option value="monday">Monday</option>
+                                  <option value="tuesday">Tuesday</option>
+                                  <option value="wednesday">Wednesday</option>
+                                  <option value="thursday">Thursday</option>
+                                  <option value="friday">Friday</option>
+                                  <option value="saturday">Saturday</option>
+                                  <option value="sunday">Sunday</option>
+                                </select>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Open
+                                  </label>
+                                  <input
+                                    type="time"
+                                    value={customDay.open}
+                                    onChange={(e) =>
+                                      updateCustomDay(
+                                        index,
+                                        "open",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Close
+                                  </label>
+                                  <input
+                                    type="time"
+                                    value={customDay.close}
+                                    onChange={(e) =>
+                                      updateCustomDay(
+                                        index,
+                                        "close",
+                                        e.target.value
+                                      )
+                                    }
+                                    className="w-full rounded-xl border border-orange-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200 bg-white"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                {(!formData.openingHours.customDays ||
+                  formData.openingHours.customDays.length === 0) && (
                   <div className="text-center py-6 text-gray-500 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
-                    <svg className="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <svg
+                      className="w-12 h-12 mx-auto text-gray-300 mb-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
                     </svg>
                     <p className="text-sm">No custom days added yet</p>
-                    <p className="text-xs text-gray-400">Click "Add Custom Day" to set different opening hours for specific days</p>
+                    <p className="text-xs text-gray-400">
+                      Click "Add Custom Day" to set different opening hours for
+                      specific days
+                    </p>
                   </div>
                 )}
               </div>
@@ -790,15 +1011,28 @@ const UpdateVenue = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex items-center mb-6">
               <div className="p-3 bg-indigo-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                <svg
+                  className="w-6 h-6 text-indigo-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                  />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Amenities</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {amenitiesOptions.map(amenity => (
-                <div key={amenity} className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-200">
+              {amenitiesOptions.map((amenity) => (
+                <div
+                  key={amenity}
+                  className="flex items-center p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                >
                   <input
                     type="checkbox"
                     id={amenity}
@@ -806,8 +1040,11 @@ const UpdateVenue = () => {
                     onChange={() => handleAmenityChange(amenity)}
                     className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded transition-all duration-200"
                   />
-                  <label htmlFor={amenity} className="ml-3 text-sm font-medium text-gray-900 cursor-pointer capitalize">
-                    {amenity.replace('_', ' ')}
+                  <label
+                    htmlFor={amenity}
+                    className="ml-3 text-sm font-medium text-gray-900 cursor-pointer capitalize"
+                  >
+                    {amenity.replace("_", " ")}
                   </label>
                 </div>
               ))}
@@ -818,17 +1055,29 @@ const UpdateVenue = () => {
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
             <div className="flex items-center mb-6">
               <div className="p-3 bg-pink-100 rounded-xl mr-4">
-                <svg className="w-6 h-6 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <svg
+                  className="w-6 h-6 text-pink-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
                 </svg>
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Photos</h2>
             </div>
-            
+
             {/* Current Photos */}
             {photos.length > 0 && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold mb-4 text-gray-900">Current Photos</h3>
+                <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                  Current Photos
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {photos.map((photo, index) => (
                     <div key={index} className="relative group">
@@ -866,11 +1115,25 @@ const UpdateVenue = () => {
                     id="photo-upload"
                   />
                   <label htmlFor="photo-upload" className="cursor-pointer">
-                    <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    <svg
+                      className="w-12 h-12 mx-auto text-gray-400 mb-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
                     </svg>
-                    <p className="text-lg font-medium text-gray-900 mb-2">Click to upload photos</p>
-                    <p className="text-sm text-gray-500">PNG, JPG, GIF up to 10MB each</p>
+                    <p className="text-lg font-medium text-gray-900 mb-2">
+                      Click to upload photos
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      PNG, JPG, GIF up to 10MB each
+                    </p>
                   </label>
                 </div>
               </div>
@@ -912,9 +1175,25 @@ const UpdateVenue = () => {
             >
               {saving ? (
                 <div className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Updating...
                 </div>
