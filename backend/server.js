@@ -11,7 +11,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   process.env.LOCAL_VITE_URL,

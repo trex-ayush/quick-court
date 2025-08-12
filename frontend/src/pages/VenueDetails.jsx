@@ -319,6 +319,10 @@ const VenueDetails = () => {
   const [bookingSuccess, setBookingSuccess] = useState("");
   const [bookingError, setBookingError] = useState("");
 
+  // payment state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState(null);
+
   // availability state
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [bookedSlots, setBookedSlots] = useState([]);
