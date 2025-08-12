@@ -35,42 +35,73 @@ const MAX_PRICE = 5000;
 const PRICE_STEP = 50;
 
 const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
-  const [active, setActive] = React.useState(null); // 'min' | 'max' | null
+  const [localMin, setLocalMin] = useState(minValue);
+  const [localMax, setLocalMax] = useState(maxValue);
+  const [isDragging, setIsDragging] = useState(null);
+
+  // Update local state when props change
+  useEffect(() => {
+    setLocalMin(minValue);
+    setLocalMax(maxValue);
+  }, [minValue, maxValue]);
 
   const getPercent = (val) =>
     Math.round(((val - MIN_PRICE) / (MAX_PRICE - MIN_PRICE)) * 100);
 
-  const left = getPercent(Math.min(minValue, maxValue));
-  const right = getPercent(Math.max(minValue, maxValue));
+  const leftPercent = getPercent(Math.min(localMin, localMax));
+  const rightPercent = getPercent(Math.max(localMin, localMax));
 
-  const handleMin = (e) => {
-    const val = Math.min(Number(e.target.value), maxValue - PRICE_STEP);
-    onChange({ min: val, max: maxValue });
+  const handleMinChange = (e) => {
+    const val = Math.min(Number(e.target.value), localMax - PRICE_STEP);
+    setLocalMin(val);
+    onChange({ min: val, max: localMax });
   };
 
-  const handleMax = (e) => {
-    const val = Math.max(Number(e.target.value), minValue + PRICE_STEP);
-    onChange({ min: minValue, max: val });
+  const handleMaxChange = (e) => {
+    const val = Math.max(Number(e.target.value), localMin + PRICE_STEP);
+    setLocalMax(val);
+    onChange({ min: localMin, max: val });
   };
+
+  const handleMouseDown = (thumb) => {
+    setIsDragging(thumb);
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(null);
+  };
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => setIsDragging(null);
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, []);
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between text-sm font-medium text-slate-700">
-        <span className="bg-slate-100 px-2 py-1 rounded text-xs">
-          ₹{minValue}
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <span className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-semibold">
+          ₹{localMin.toLocaleString()}
         </span>
-        <span className="bg-slate-100 px-2 py-1 rounded text-xs">
-          ₹{maxValue}
+        <span className="text-slate-400 text-xs">to</span>
+        <span className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-sm font-semibold">
+          ₹{localMax.toLocaleString()}
         </span>
       </div>
-      <div className="relative px-2 py-4">
-        {/* Track */}
-        <div className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-200" />
 
-        {/* Active track */}
+      <div className="relative px-3 py-6">
+        {/* Track background */}
+        <div className="absolute left-3 right-3 top-1/2 transform -translate-y-1/2 h-3 rounded-full bg-slate-200" />
+
+        {/* Active range track */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"
-          style={{ left: `${left}%`, width: `${right - left}%` }}
+          className="absolute top-1/2 transform -translate-y-1/2 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-sm"
+          style={{ 
+            left: `${leftPercent}%`, 
+            width: `${rightPercent - leftPercent}%`,
+            marginLeft: '12px',
+            marginRight: '12px'
+          }}
         />
 
         {/* Min range input */}
@@ -79,13 +110,17 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           min={MIN_PRICE}
           max={MAX_PRICE}
           step={PRICE_STEP}
-          value={minValue}
-          onChange={handleMin}
-          onMouseDown={() => setActive("min")}
-          onTouchStart={() => setActive("min")}
-          className={`absolute left-0 right-0 w-full h-2 appearance-none bg-transparent cursor-pointer slider-thumb ${
-            active === "min" ? "z-30" : "z-20"
+          value={localMin}
+          onChange={handleMinChange}
+          onMouseDown={() => handleMouseDown('min')}
+          onMouseUp={handleMouseUp}
+          className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
+            isDragging === 'min' ? 'z-30' : 'z-20'
           }`}
+          style={{ 
+            background: 'transparent',
+            outline: 'none'
+          }}
         />
 
         {/* Max range input */}
@@ -94,40 +129,69 @@ const PriceRangeSlider = ({ minValue, maxValue, onChange }) => {
           min={MIN_PRICE}
           max={MAX_PRICE}
           step={PRICE_STEP}
-          value={maxValue}
-          onChange={handleMax}
-          onMouseDown={() => setActive("max")}
-          onTouchStart={() => setActive("max")}
-          className={`absolute left-0 right-0 w-full h-2 appearance-none bg-transparent cursor-pointer slider-thumb ${
-            active === "max" ? "z-30" : "z-20"
+          value={localMax}
+          onChange={handleMaxChange}
+          onMouseDown={() => handleMouseDown('max')}
+          onMouseUp={handleMouseUp}
+          className={`absolute w-full h-3 bg-transparent appearance-none cursor-pointer slider-thumb ${
+            isDragging === 'max' ? 'z-30' : 'z-20'
           }`}
+          style={{ 
+            background: 'transparent',
+            outline: 'none'
+          }}
         />
       </div>
 
       <style jsx>{`
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
-          width: 20px;
-          height: 20px;
-          background: white;
+          width: 24px;
+          height: 24px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
           border: 3px solid #3b82f6;
           border-radius: 50%;
           cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3), 0 2px 6px rgba(0, 0, 0, 0.1);
+          transition: all 0.2s ease;
+          position: relative;
+        }
+        
+        .slider-thumb::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4), 0 4px 12px rgba(0, 0, 0, 0.15);
+          border-color: #2563eb;
+        }
+        
+        .slider-thumb::-webkit-slider-thumb:active {
+          transform: scale(1.1);
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+        }
+        
+        .slider-thumb::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          border: 3px solid #3b82f6;
+          border-radius: 50%;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
           transition: all 0.2s ease;
         }
-        .slider-thumb::-webkit-slider-thumb:hover {
-          transform: scale(1.1);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        
+        .slider-thumb::-moz-range-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
-        .slider-thumb::-moz-range-thumb {
-          width: 20px;
-          height: 20px;
-          background: white;
-          border: 3px solid #3b82f6;
-          border-radius: 50%;
-          cursor: pointer;
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        
+        .slider-thumb::-moz-range-track {
+          background: transparent;
+          border: none;
+        }
+        
+        .slider-thumb::-webkit-slider-runnable-track {
+          background: transparent;
+          border: none;
         }
       `}</style>
     </div>
@@ -257,7 +321,7 @@ const AllVenues = () => {
     const startIndex = (page - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     const paginated = filtered.slice(startIndex, endIndex);
-    console.log('Pagination Debug - Page:', page, 'Start:', startIndex, 'End:', endIndex, 'Paginated count:', paginated.length);
+    // console.log('Pagination Debug - Page:', page, 'Start:', startIndex, 'End:', endIndex, 'Paginated count:', paginated.length);
     return paginated;
   }, [filtered, page]);
 
@@ -277,7 +341,7 @@ const AllVenues = () => {
   }, [totalPages, page]);
 
   const nextPage = () => {
-    console.log('Next Page Debug - Current page:', page, 'Total pages:', totalPages, 'Can go next:', page < totalPages);
+    // console.log('Next Page Debug - Current page:', page, 'Total pages:', totalPages, 'Can go next:', page < totalPages);
     if (page < totalPages) {
       const p = page + 1;
       setPage(p);
@@ -300,6 +364,7 @@ const AllVenues = () => {
     setMinPrice(MIN_PRICE);
     setMaxPrice(MAX_PRICE);
     setVenueType("all");
+    setPriceRange({ min: MIN_PRICE, max: MAX_PRICE });
   };
 
   return (
@@ -342,7 +407,7 @@ const AllVenues = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[300px,1fr] gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-8">
           {/* Enhanced Sidebar Filters */}
           <aside className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 h-fit shadow-lg sticky top-4">
             <div className="space-y-6">
@@ -370,21 +435,6 @@ const AllVenues = () => {
                     onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
                   />
                 </div>
-                
-                {/* Venue Name Search */}
-                {/* <div>
-                  <label className="block text-xs font-medium mb-2 text-blue-700">
-                    Venue Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Enter venue name..."
-                    className="w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    value={searchQuery.venueName}
-                    onChange={(e) => setSearchQuery(prev => ({ ...prev, venueName: e.target.value }))}
-                    onKeyPress={(e) => e.key === 'Enter' && searchVenues()}
-                  />
-                </div> */}
                 
                 {/* Search Button */}
                 <button
@@ -468,7 +518,7 @@ const AllVenues = () => {
                     setMaxPrice(max);
                   }}
                 />
-                <p className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg p-2">
+                <p className="mt-3 text-xs text-slate-500 bg-slate-50 rounded-lg p-3">
                   💡 Pricing shown when available from venue courts
                 </p>
               </div>
@@ -551,14 +601,14 @@ const AllVenues = () => {
             </div>
           </aside>
 
-          {/* Enhanced Results Grid */}
+          {/* Enhanced Results Grid - Larger Cards */}
           <div>
             {loading && (
-              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
-                {Array.from({ length: 9 }).map((_, idx) => (
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+                {Array.from({ length: 6 }).map((_, idx) => (
                   <div
                     key={idx}
-                    className="h-80 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse"
+                    className="h-96 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse"
                   />
                 ))}
               </div>
@@ -601,7 +651,8 @@ const AllVenues = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 2xl:grid-cols-3">
+                    {/* Larger Cards Grid */}
+                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
                       {paginatedVenues.map((venue) => {
                         const key = venue.id || venue._id;
                         const rating = Number(venue?.averageRating || 0).toFixed(1);
@@ -610,62 +661,138 @@ const AllVenues = () => {
                           venue?.sports?.[0]?.name ||
                           (venue?.sports?.length > 1 ? "Multi-sport" : "Sport");
                         const tags = Array.isArray(venue?.amenities)
-                          ? venue.amenities.slice(0, 3)
+                          ? venue.amenities.slice(0, 4)
                           : [];
+                        const minPrice = getMinPrice(venue);
 
                         return (
                           <article
                             key={key}
-                            className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1"
+                            className="group overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2"
                           >
                             <div className="relative overflow-hidden">
                               <img
                                 src={imageSrc}
                                 alt={venue?.name || "Venue"}
-                                className="h-48 w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-110"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              
+                              {/* Rating Badge */}
                               <div className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/70 backdrop-blur-sm px-3 py-1.5 text-sm text-white font-medium">
                                 <span className="text-yellow-400">⭐</span>
                                 <span>{rating}</span>
                               </div>
+                              
+                              {/* Sport Badge */}
                               <div className="absolute right-4 top-4">
                                 <span className="inline-block rounded-full bg-white/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-slate-700">
                                   {sportLabel}
                                 </span>
                               </div>
+
+                              {/* Price Badge */}
+                              {minPrice && (
+                                <div className="absolute left-4 bottom-4">
+                                  <span className="inline-block rounded-full bg-green-500/90 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-white">
+                                    ₹{minPrice}/hr
+                                  </span>
+                                </div>
+                              )}
                             </div>
 
                             <div className="p-6">
-                              <div className="mb-3">
-                                <h4 className="font-bold text-xl leading-tight text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">
+                              <div className="mb-4">
+                                <h4 className="font-bold text-xl leading-tight text-slate-800 mb-2 group-hover:text-blue-600 transition-colors">
                                   {venue?.name}
                                 </h4>
-                                <p className="text-sm text-slate-500 flex items-center gap-1">
+                                <p className="text-sm text-slate-500 flex items-center gap-1 mb-3">
                                   <span>📍</span>
                                   {venue?.address}
                                 </p>
+                                
+                                {/* Venue Type */}
+                                {venue?.venueType && (
+                                  <div className="mb-3">
+                                    <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
+                                      venue.venueType === 'indoor' 
+                                        ? 'bg-blue-100 text-blue-800' 
+                                        : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {venue.venueType === 'indoor' ? '🏢' : '🌤️'}
+                                      {venue.venueType.charAt(0).toUpperCase() + venue.venueType.slice(1)}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
 
-                              {tags.length > 0 && (
-                                <div className="mb-4 flex flex-wrap gap-2">
-                                  {tags.map((tag) => (
-                                    <span
-                                      key={tag}
-                                      className="inline-block rounded-full bg-gradient-to-r from-slate-100 to-slate-200 px-3 py-1 text-xs font-medium text-slate-600"
-                                    >
-                                      {tag}
-                                    </span>
-                                  ))}
+                              {/* Sports List */}
+                              {venue?.sports && venue.sports.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="text-xs font-medium text-slate-600 mb-2">Available Sports:</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {venue.sports.slice(0, 3).map((sport, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="inline-block bg-slate-100 text-slate-700 px-2 py-1 rounded-full text-xs font-medium"
+                                      >
+                                        {sport.name}
+                                      </span>
+                                    ))}
+                                    {venue.sports.length > 3 && (
+                                      <span className="inline-block bg-slate-200 text-slate-600 px-2 py-1 rounded-full text-xs font-medium">
+                                        +{venue.sports.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
-                              <div className="flex items-center justify-end gap-3">
+                              {/* Amenities */}
+                              {tags.length > 0 && (
+                                <div className="mb-4">
+                                  <div className="text-xs font-medium text-slate-600 mb-2">Amenities:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {tags.map((tag) => (
+                                      <span
+                                        key={tag}
+                                        className="inline-block rounded-full bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-2 py-1 text-xs font-medium"
+                                      >
+                                        {tag}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Price and Rating Info */}
+                              <div className="flex items-center justify-between mb-4 p-3 bg-slate-50 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-yellow-500">⭐</span>
+                                  <span className="text-sm font-semibold text-slate-700">{rating}</span>
+                                  <span className="text-xs text-slate-500">rating</span>
+                                </div>
+                                {minPrice && (
+                                  <div className="text-right">
+                                    <div className="text-xs text-slate-500">Starting from</div>
+                                    <div className="text-lg font-bold text-green-600">₹{minPrice}/hr</div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Action Buttons */}
+                              <div className="flex items-center gap-3">
                                 <button
                                   onClick={() => navigate(`/venues/${key}`)}
-                                  className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200"
+                                  className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 px-4 py-3 text-sm font-semibold text-white transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl"
                                 >
                                   👀 View Details
+                                </button>
+                                <button
+                                  onClick={() => navigate(`/venues/${key}/book`)}
+                                  className="rounded-xl border-2 border-slate-200 hover:border-blue-300 hover:bg-blue-50 px-4 py-3 text-sm font-semibold text-slate-700 hover:text-blue-700 transition-all duration-200"
+                                >
+                                  📅 Book Now
                                 </button>
                               </div>
                             </div>
@@ -675,7 +802,7 @@ const AllVenues = () => {
                     </div>
 
                     {/* Enhanced Pagination - Only show when there are venues */}
-                    {paginatedVenues.length > 0 && (
+                    {paginatedVenues.length > 0 && totalPages > 1 && (
                       <div className="mt-12 flex items-center justify-center gap-4">
                         <button
                           onClick={prevPage}
