@@ -38,7 +38,7 @@ const OtpVerification = () => {
       });
 
       if (res.status === 200) {
-        navigate("/dashboard");
+        navigate("/");
       }
     } catch (err) {
       setError(err.response?.data?.message || "Invalid OTP. Please try again.");
