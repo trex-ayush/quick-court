@@ -6,7 +6,6 @@ Below are walkthrough videos for each role:
 ---
 
 ## 🎯 For Users
-**Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/0a1dcafa5bab4f8392ee9bc26d806e44?sid=1e282ab9-a43c-40d9-9204-d1db3876bf99)
 
 ### Features
 - Browse available facilities.
@@ -17,7 +16,6 @@ Below are walkthrough videos for each role:
 ---
 
 ## 🏢 For Facility Owners
-**Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/a0499637cecf444380d9624e5867c809?sid=eae2967b-a905-4cbc-939a-e73e707d56be)
 
 ### Features
 - Create and manage facility listings.
@@ -27,7 +25,6 @@ Below are walkthrough videos for each role:
 ---
 
 ## 🛠️ For Administrators
-**Video Walkthrough:** [Watch on Loom](https://www.loom.com/share/db11cb2bfb93498ca2833952a43ded24?sid=fbe5f32c-5c17-4483-987d-b2da965c5a76)
 
 ### Features
 - Manage users and facility owners.
@@ -39,3 +36,4 @@ Below are walkthrough videos for each role:
 
 ## 📌 Note
 The **full README** with installation instructions, usage guide, and technical documentation **will be updated soon**.
+
